@@ -1,0 +1,50 @@
+{% extends 'instructor/base_instructor.html' %}
+{% load static %}
+{% block title %}เพิ่มคอร์สเรียนแบบวิดีโอ{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/instructor/add_video_course.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="body-container">
+    <div class="add-course-container">
+        <div class="form-header">
+            <h1>เพิ่มคอร์สเรียนแบบวิดีโอ</h1>
+        </div>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="name">ชื่อคอร์ส *</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="description">คำอธิบาย *</label>
+                <textarea id="description" name="description" rows="4" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="category">หมวดหมู่ *</label>
+                <input type="text" id="category" name="category" required>
+            </div>
+            <div class="form-group">
+                <label for="instructor">ผู้สอน *</label>
+                <input type="text" id="instructor" name="instructor" required>
+            </div>
+            <div class="form-group">
+                <label for="price">ราคา *</label>
+                <input type="number" id="price" name="price" required> บาท
+            </div>
+            <div class="form-group">
+                <label for="image">รูปภาพ *</label>
+                <input type="file" id="image" name="image" accept="image/*" required>
+            </div>
+            <div class="form-buttons">
+                <button type="button" class="btn-add-video">เพิ่มวิดีโอการสอน</button>
+                <a href="{% url 'add_video_course_details' %}" class="btn-add-details">เพิ่มรายละเอียดคอร์สเรียน</a>
+                <button type="submit" class="btn-submit">บันทึกคอร์ส</button>
+                <a href="{#}" class="btn-cancel">ยกเลิก</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

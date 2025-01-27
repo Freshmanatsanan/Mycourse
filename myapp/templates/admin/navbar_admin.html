@@ -1,0 +1,28 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/admin/navbar_admin.css' %}">
+<div class="sidebar">
+    <!-- Logo -->
+
+
+    <!-- Navigation Links -->
+    <ul class="nav-links">
+        <li class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+            <a href="{% url 'admin_dashboard' %}">Dashboard</a>
+        </li>
+        <li class="{% if request.resolver_match.url_name == 'review_booking_courses' %}active{% endif %}">
+            <a href="{% url 'review_booking_courses' %}">คอร์สเรียนแบบจอง</a>
+        </li>
+        <li class="{% if request.resolver_match.url_name == 'review_video_courses' %}active{% endif %}">
+            <a href="{% url 'review_video_courses' %}">คอร์สเรียนแบบวิดีโอ</a>
+        </li>
+        <li class="{% if request.resolver_match.url_name == 'sales'  %}active{% endif %}">
+            <a href="{% url 'sales' %}">การขาย</a>
+        </li>
+        <li class="{% if request.resolver_match.url_name == 'user_list'  %}active{% endif %}">
+            <a href="{% url 'user_list' %}">รายชื่อ</a>
+        </li>
+    </ul>
+
+    <!-- Logout Button -->
+
+</div>

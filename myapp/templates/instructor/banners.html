@@ -1,0 +1,52 @@
+{% extends 'instructor/base_instructor.html' %}
+{% load static %}
+{% block title %}จัดการสไลด์เบนเนอร์{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/instructor/banners.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Mali:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="body-container">
+    <div class="banner-container">
+        <div class="header-section">
+            <h1 class="page-title">จัดการสไลด์เบนเนอร์</h1>
+            <a href="{% url 'add_banner' %}" class="add-banner-btn">เพิ่มเบนเนอร์</a>
+        </div>
+
+        <div class="table-section">
+            <table class="banner-table">
+                <thead>
+                    <tr>
+                        <th>รูป</th>
+                        <th>วันที่สร้าง</th>
+                        <th>การจัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if banners %}
+                        {% for banner in banners %}
+                        <tr>
+                            <td>
+                                <img src="{{ banner.image.url }}" alt="Banner Image" class="banner-image">
+                            </td>
+                            <td>
+                                {{ banner.created_at|date:"d/m/Y H:i" }} <!-- แสดงวันที่สร้าง -->
+                            </td>
+                            <td>
+                                <a href="{% url 'delete_banner' banner.id %}" class="delete-btn">ลบ</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center">ไม่มีเบนเนอร์ที่จะแสดง</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

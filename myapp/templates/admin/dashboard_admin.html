@@ -1,0 +1,88 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin/dashboard_admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="body-wrapper">
+    <div class="dashboard-container">
+        <h1 class="dashboard-title"></h1>
+        <div class="summary-section">
+            <div class="summary-box total-income">
+                <h3>รายได้รวม:</h3>
+                <p>{{ total_income }} ฿</p>
+            </div>
+            <div class="summary-box video-income">
+                <h3>รายได้จากคอร์สวิดีโอ:</h3>
+                <p>{{ video_income }} ฿</p>
+            </div>
+            <div class="summary-box booking-income">
+                <h3>รายได้จากการจองคอร์ส:</h3>
+                <p>{{ booking_income }} ฿</p>
+            </div>
+            <div class="summary-box total-courses">
+                <h3>คอร์สทั้งหมด:</h3>
+                <p>คอร์สวิดีโอ: {{ video_course_count }}</p>
+                <p>คอร์สจอง: {{ booking_course_count }}</p>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-box">
+                <h3>กราฟสรุปการสั่งซื้อ</h3>
+                <canvas id="orderChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>กราฟสรุปรายได้</h3>
+                <canvas id="incomeChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const orderChart = document.getElementById('orderChart');
+    new Chart(orderChart, {
+        type: 'line',
+        data: {
+            labels: {{ order_labels|safe }},
+            datasets: [
+                {
+                    label: 'ยอดจองคอร์ส',
+                    data: {{ booking_orders|safe }},
+                    borderColor: 'orange',
+                    tension: 0.1,
+                },
+                {
+                    label: 'ยอดซื้อคอร์ส',
+                    data: {{ video_orders|safe }},
+                    borderColor: 'blue',
+                    tension: 0.1,
+                },
+            ],
+        },
+    });
+
+    const incomeChart = document.getElementById('incomeChart');
+    new Chart(incomeChart, {
+        type: 'bar',
+        data: {
+            labels: {{ income_labels|safe }},
+            datasets: [
+                {
+                    label: 'ยอดจองคอร์ส',
+                    data: {{ booking_income_data|safe }},
+                    backgroundColor: 'orange',
+                },
+                {
+                    label: 'ยอดซื้อคอร์ส',
+                    data: {{ video_income_data|safe }},
+                    backgroundColor: 'blue',
+                },
+            ],
+        },
+    });
+</script>
+{% endblock %}

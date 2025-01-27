@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}I say ROAR{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
+    <link rel="stylesheet" href="{% static 'css/navbar_guest.css' %}">
+    {% block extra_css %}{% endblock %}
+
+</head>
+<body>
+    <!-- Navbar -->
+    {% if user.is_authenticated %}
+        {% include 'navbar.html' %}
+    {% else %}
+        {% include 'navbar_guest.html' %}
+    {% endif %}
+
+    <!-- Content -->
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+     <!-- <footer>
+        <p>&copy; 2024 I say ROAR. All rights reserved.</p>
+    </footer>-->
+</body>
+</html>

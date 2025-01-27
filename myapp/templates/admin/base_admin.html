@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}I say ROAR{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/admin/navbar_admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/admin/header_admin.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        {% include 'admin/navbar_admin.html' %}
+        
+        <!-- Header -->
+        {% include 'admin/header_admin.html' %}
+
+        <!-- Main Content -->
+        <div class="main-content">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+</body>
+</html>

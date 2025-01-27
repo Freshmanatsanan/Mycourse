@@ -1,0 +1,44 @@
+{% extends 'instructor/base_instructor.html' %}
+{% load static %}
+{% block title %}เพิ่มรายละเอียดคอร์สเรียน{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/instructor/add_course_details.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="body-container">
+    <div class="add-details-container">
+        <div class="form-header">
+            <h1>เพิ่มรายละเอียดคอร์สเรียน</h1>
+        </div>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="title">ชื่อ *</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            <div class="form-group">
+                <label for="description">คำอธิบาย *</label>
+                <textarea id="description" name="description" rows="4" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="extra_description">คำอธิบายเพิ่มเติม *</label>
+                <textarea id="extra_description" name="extra_description" rows="4" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="image">รูปภาพ *</label>
+                <input type="file" id="image" name="image" accept="image/*" required>
+            </div>
+            <div class="form-group">
+                <label for="extra_image">รูปภาพเพิ่มเติม *</label>
+                <input type="file" id="extra_image" name="extra_image" accept="image/*" required>
+            </div>
+            <div class="form-buttons">
+                <button type="submit" class="btn-submit">เพิ่มรายละเอียดคอร์สเรียน</button>
+
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

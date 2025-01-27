@@ -1,0 +1,559 @@
+
+from django.shortcuts import render, redirect,get_object_or_404
+from django.contrib.auth.models import User
+from django.contrib import messages
+from .models import Course,VideoCourse
+from .models import CourseDetails
+from django.http import HttpResponse
+from .models import Banner
+from .models import Staff
+from .models import BookingCourse
+from .models import CourseOrder
+from .models import VideoLesson  
+from .models import UserProfile 
+from django.contrib.auth import authenticate, login
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.contrib.auth import logout
+from django.shortcuts import redirect
+from rest_framework.decorators import api_view , permission_classes
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import IsAuthenticated
+from django.http import HttpResponseBadRequest, HttpResponseRedirect
+from django.urls import reverse
+from .permissions import IsInstructor, IsAdmin
+
+
+
+
+#from django.contrib.auth import get_user_model
+
+#User = get_user_model()
+
+
+def register(request):
+    if request.method == 'POST':
+        username = request.POST['username']
+        first_name = request.POST['first_name']
+        last_name = request.POST['last_name']
+        email = request.POST['email']
+        password = request.POST['password']
+        password2 = request.POST['password2']
+
+        # ตรวจสอบความยาวของรหัสผ่าน
+        if len(password) < 8:
+            messages.error(request, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร')
+        elif password != password2:
+            messages.error(request, 'รหัสผ่านไม่ตรงกัน')
+        else:
+            if User.objects.filter(username=username).exists():
+                messages.error(request, 'ชื่อผู้ใช้นี้มีอยู่แล้ว')
+            elif User.objects.filter(email=email).exists():
+                messages.error(request, 'อีเมลนี้ถูกใช้ไปแล้ว')
+            else:
+                from django.contrib.auth.hashers import make_password
+
+                # ใช้ make_password สำหรับการเข้ารหัสรหัสผ่าน
+                user = User.objects.create(
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email,
+                    password=make_password(password)
+                )
+                user.save()
+                messages.success(request, 'สร้างบัญชีสำเร็จแล้ว')
+                return redirect('login')
+
+    return render(request, 'register.html')
+
+
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+
+            # ตรวจสอบบทบาทผ่านฟิลด์ role
+            if hasattr(user, 'role'):
+                if user.role == 'admin':  # หากเป็น Admin
+                    return redirect('admin_dashboard')
+                elif user.role == 'instructor':  # หากเป็น Instructor
+                    return redirect('instructor_sales')
+                elif user.role == 'member':  # หากเป็น Member
+                    return redirect('home')
+                else:
+                    messages.error(request, 'บทบาทผู้ใช้งานไม่ถูกต้อง')
+                    return redirect('login')  # Redirect กลับไปที่หน้า login หาก role ไม่ถูกต้อง
+            else:
+                messages.error(request, 'ไม่พบข้อมูลบทบาทของผู้ใช้งาน')
+                return redirect('login')
+        else:
+            messages.error(request, 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
+    return render(request, 'login.html')
+
+
+#-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#ใช้เพื่อตรวจสอบ token ของฝั่ง mobile เเละดึงข้อมูลผู้ใช้งาน
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_data(request):
+    user = request.user
+    return Response({
+        'username': user.username,
+        'email': user.email,
+    })
+
+
+
+@api_view(['POST'])
+def register_api(request):
+    username = request.data.get('username')
+    first_name = request.data.get('first_name')
+    last_name = request.data.get('last_name')
+    email = request.data.get('email')
+    password = request.data.get('password')
+    password2 = request.data.get('password2')
+
+    if password != password2:
+        return Response({"error": "รหัสผ่านไม่ตรงกัน"}, status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(username=username).exists():
+        return Response({"error": "ชื่อผู้ใช้นี้มีอยู่แล้ว"}, status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(email=email).exists():
+        return Response({"error": "อีเมลนี้ถูกใช้ไปแล้ว"}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.create(
+        username=username,
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        password=make_password(password)
+    )
+    user.save()
+    return Response({"message": "สร้างบัญชีสำเร็จแล้ว"}, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+def login_api(request):
+    email = request.data.get('email')  # ใช้ email แทน username
+    password = request.data.get('password')
+
+    if not email or not password:
+        return Response({'error': 'กรุณากรอกอีเมลและรหัสผ่าน'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # ค้นหาผู้ใช้ด้วยอีเมล
+        user = User.objects.get(email=email)
+        # ใช้ username ของ user ที่เจอสำหรับ authenticate
+        user = authenticate(username=user.username, password=password)
+
+        if user is not None:
+            # สร้าง JWT tokens
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    except User.DoesNotExist:
+        return Response({'error': 'ไม่พบผู้ใช้งานในระบบ'}, status=status.HTTP_404_NOT_FOUND)
+
+#-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+def user_list(request):
+    members = UserProfile.objects.filter(role='member')
+    teachers = UserProfile.objects.filter(role='teacher')
+    return render(request, 'admin/users_teachers.html', {'members': members, 'teachers': teachers})
+
+def sales(request):
+    orders = CourseOrder.objects.all()
+    return render(request, 'admin/sales.html', {'orders': orders})
+
+def review_video_courses(request):
+    courses = VideoLesson.objects.filter(status='pending')  # ใช้ VideoLesson
+    return render(request, 'admin/review_video_courses.html', {'courses': courses})
+
+def approve_video_course(request, course_id):
+    course = get_object_or_404(VideoLesson, id=course_id)  # ใช้ VideoLesson
+    course.status = 'approved'
+    course.save()
+    return redirect('review_video_courses')
+
+def send_back_video_course(request, course_id):
+    course = get_object_or_404(VideoLesson, id=course_id)  # ใช้ VideoLesson
+    course.status = 'revision'
+    course.save()
+    return redirect('review_video_courses')
+
+
+def upload_payment_qr(request, course_id):
+    if request.method == 'POST':
+        course = get_object_or_404(BookingCourse, id=course_id)
+        payment_qr = request.FILES.get('payment_qr')
+        if payment_qr:
+            course.payment_qr = payment_qr
+            course.save()
+            return redirect('review_booking_courses')
+        else:
+            return HttpResponse("กรุณาอัปโหลดไฟล์รูปภาพ QR Code")
+    return HttpResponse("ไม่อนุญาตให้เข้าถึง")
+
+def review_booking_courses(request):
+    # ดึงเฉพาะคอร์สที่มีสถานะ 'pending' หรือ 'revised'
+    courses = Course.objects.filter(status__in=['pending', 'revised'])
+    return render(request, 'admin/review_booking_courses.html', {'courses': courses})
+
+
+def delete_selected_courses(request):
+    if request.method == 'POST':
+        # ดึงรายการ ID คอร์สที่ถูกเลือกจาก checkbox
+        selected_ids = request.POST.getlist('selected_courses')
+
+        if selected_ids:
+            # ลบคอร์สทั้งหมดที่มี ID ตรงกับรายการที่เลือก
+            courses_to_delete = Course.objects.filter(id__in=selected_ids)
+
+            # ลบคอร์สและรายละเอียดคอร์สที่เกี่ยวข้อง
+            for course in courses_to_delete:
+                course.delete()
+
+            messages.success(request, f"ลบคอร์สที่เลือกจำนวน {len(selected_ids)} รายการเรียบร้อยแล้ว!")
+        else:
+            messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
+    
+    # กลับไปยังหน้าคอร์สเรียนแบบจอง
+    return redirect('reservation_courses')
+
+def approve_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    course.status = 'approved'  # เปลี่ยนสถานะเป็นอนุมัติ
+    course.save()
+    messages.success(request, 'อนุมัติคอร์สเรียนเรียบร้อยแล้ว!')
+    return redirect('review_booking_courses')  # กลับไปยังหน้าตรวจสอบคอร์ส
+
+
+
+
+def send_back_course(request, course_id):
+    if request.method == 'POST':
+        revision_message = request.POST.get('revision_message')
+
+        # ดึงข้อมูลคอร์สและอัปเดตสถานะ
+        course = get_object_or_404(Course, id=course_id)
+        course.status = 'revision'  # เปลี่ยนสถานะเป็น "revision"
+        course.revision_message = revision_message  # บันทึกข้อความที่แอดมินส่งกลับ
+        course.save()
+
+        messages.success(request, 'ส่งคอร์สกลับไปแก้ไขเรียบร้อยแล้ว!')
+        return redirect('review_booking_courses')
+    else:
+        # กรณี GET method
+        return HttpResponseRedirect(reverse('review_booking_courses'))
+    
+
+@permission_classes([IsAdmin])
+def admin_dashboard(request):
+
+    return render(request, 'admin/dashboard_admin.html')
+
+@permission_classes([IsInstructor])
+def add_banner(request):
+    if request.method == 'POST':
+        image = request.FILES.get('banner_image')
+        if image:
+            Banner.objects.create(image=image)
+            messages.success(request, "เพิ่มสไลด์เบนเนอร์สำเร็จ!")
+            return redirect('banners')
+        else:
+            messages.error(request, "กรุณาเลือกไฟล์รูปภาพ")
+    return render(request, 'instructor/add_banner.html')
+
+def banners(request):
+    # ดึงข้อมูลเบนเนอร์ทั้งหมดจากฐานข้อมูล
+    banners = Banner.objects.all()
+    return render(request, 'instructor/banners.html', {'banners': banners})
+
+def delete_banner(request, banner_id):
+    banner = get_object_or_404(Banner, id=banner_id)
+    banner.delete()
+    messages.success(request, "ลบเบนเนอร์สำเร็จ!")
+    return redirect('banners')
+
+def add_video_course_details(request):
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        extra_description = request.POST.get('extra_description', '')
+        image = request.FILES.get('image')
+        extra_image = request.FILES.get('extra_image')
+        return redirect('video_courses')
+    return render(request, 'instructor/add_video_course_details.html')
+
+
+
+def add_course_details(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+        additional_description = request.POST.get('additional_description')
+        image = request.FILES.get('image')
+        additional_image = request.FILES.get('additional_image')
+        extra_image_1 = request.FILES.get('extra_image_1')  
+        extra_image_2 = request.FILES.get('extra_image_2')
+
+        # บันทึกข้อมูลรายละเอียดคอร์ส
+        course_details = CourseDetails(
+            course=course,
+            name=name,
+            description=description,
+            additional_description=additional_description,
+            image=image,
+            additional_image=additional_image,
+            extra_image_1=extra_image_1,  # เพิ่มฟิลด์รูปภาพเพิ่มเติม 1
+            extra_image_2=extra_image_2,
+        )
+        course_details.save()
+
+        messages.success(request, "เพิ่มรายละเอียดคอร์สสำเร็จ!")
+        return redirect('reservation_courses')
+
+    return render(request, 'instructor/add_course_details.html', {'course': course})
+
+def course_details(request, course_id):
+    # ดึง CourseDetails ตาม course_id
+    course = get_object_or_404(CourseDetails, course_id=course_id)
+    add_course = course.course  # สมมติว่า CourseDetails มี ForeignKey กับ add_course
+
+    return render(request, 'course_details.html', {'course': course, 'add_course': add_course})
+
+
+
+def submit_course_for_review(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    course_details = get_object_or_404(CourseDetails, course=course)
+
+    if request.method == 'POST':
+        # เปลี่ยนสถานะคอร์สเป็นรอการตรวจสอบ
+        course.status = 'pending'
+        course.save()
+        messages.success(request, "ส่งคอร์สให้แอดมินตรวจสอบเรียบร้อยแล้ว!")
+        return redirect('reservation_courses')
+
+    return render(request, 'instructor/submit_course.html', {
+        'course': course,
+        'course_details': course_details
+    })
+def add_video_course(request):
+    if request.method == 'POST':
+        # รับข้อมูลจากฟอร์ม
+        name = request.POST['name']
+        description = request.POST['description']
+        video_url = request.POST['video_url']
+        price = request.POST['price']
+
+        # บันทึกลงฐานข้อมูล (สมมติว่ามีโมเดล VideoCourse)
+        VideoCourse.objects.create(
+            name=name,
+            description=description,
+            video_url=video_url,
+            price=price
+        )
+        return redirect('video_courses')  # กลับไปยังหน้ารายการคอร์ส
+
+    return render(request, 'instructor/add_video_course.html')
+def video_courses(request):
+    return render(request, "instructor/video_courses.html")
+
+
+def add_course(request):
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description')
+        instructor = request.POST.get('instructor')  # รับค่าชื่อผู้สอน
+        price = request.POST.get('price')
+        image = request.FILES.get('image')
+
+
+        # บันทึกข้อมูลในโมเดล
+        course = Course.objects.create(
+            title=title,
+            description=description,
+            instructor=instructor,
+            price=price,
+            image=image,
+
+        )
+        course.save()
+        messages.success(request, "เพิ่มคอร์สเรียนสำเร็จ! คุณสามารถเพิ่มรายละเอียดคอร์สเรียนต่อได้")
+        return redirect('add_course_details', course_id=course.id)  # ส่ง course_id ไปยังหน้ารายละเอียด
+
+    return render(request, 'instructor/add_course.html')
+
+def edit_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    
+    if request.method == 'POST':
+        # รับค่าจากฟอร์มและบันทึก
+        course.title = request.POST.get('title')
+        course.description = request.POST.get('description')
+        course.instructor = request.POST.get('instructor')
+        course.price = request.POST.get('price')
+        if 'image' in request.FILES:
+            course.image = request.FILES['image']
+        course.save()
+        
+        # หลังบันทึกให้เด้งไปยังหน้าแก้ไขรายละเอียดคอร์สเรียน
+        return redirect('edit_course_details', course_id=course.id)
+    
+    return render(request, 'instructor/edit_course.html', {'course': course})
+
+
+def edit_course_details(request, course_id):
+    # ดึงข้อมูลรายละเอียดคอร์ส
+    course_details = get_object_or_404(CourseDetails, course__id=course_id)
+    course = course_details.course
+
+    if request.method == "POST":
+        # อัปเดตฟิลด์ต่างๆ
+        course_details.name = request.POST.get('name', course_details.name)
+        course_details.description = request.POST.get('description', course_details.description)
+        course_details.additional_description = request.POST.get('additional_description', course_details.additional_description)
+
+        if 'image' in request.FILES:
+            course_details.image = request.FILES['image']
+        if 'additional_image' in request.FILES:
+            course_details.additional_image = request.FILES['additional_image']
+
+        # อัปเดตสถานะคอร์สเป็น "แก้ไขแล้วรอการตรวจสอบ"
+        course.status = 'revised'
+        course.save()
+
+        course_details.save()
+
+        # ส่งข้อความยืนยัน
+        messages.success(request, "รายละเอียดคอร์สถูกบันทึกและส่งไปยังแอดมินตรวจสอบแล้ว")
+        return redirect('reservation_courses')
+
+    return render(request, 'instructor/edit_course_details.html', {
+        'course_details': course_details,
+        'course': course
+    })
+
+
+def reservation_courses(request):
+    courses = Course.objects.all()
+    return render(request, 'instructor/reservation_courses.html', {'courses': courses})
+
+def instructor_sales(request):
+    return render(request, 'instructor/sales.html')
+
+def contact(request):
+    return render(request, 'contact.html')
+
+def staff_list(request):
+    staff_list = Staff.objects.all()  # ดึงข้อมูลบุคลากรจากฐานข้อมูล
+    return render(request, 'staff.html', {'staff_list': staff_list})
+
+
+
+def home(request):
+    banners = Banner.objects.filter(is_active=True)
+    approved_courses = Course.objects.filter(status='approved')
+    
+    if request.user.is_authenticated:
+        return render(request, 'home.html', {
+            'banners': banners,
+            'courses': approved_courses,
+        })  # สำหรับสมาชิก
+    
+    return render(request, 'guest_home.html', {
+        'banners': banners,
+        'courses': approved_courses,
+    })  # สำหรับผู้ที่ยังไม่ได้เป็นสมาชิก
+
+
+def login_view(request):
+    if request.method == 'POST':
+        email = request.POST['email']
+        password = request.POST['password']
+        
+        try:
+            # ค้นหา username จาก email
+            user = User.objects.get(email=email)
+            username = user.username
+            # ตรวจสอบการยืนยันตัวตน
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('home')  # Redirect to home page
+            else:
+                messages.error(request, 'อีเมลหรือรหัสผ่านไม่ถูกต้อง')
+        except User.DoesNotExist:
+            messages.error(request, 'ไม่พบบัญชีผู้ใช้ที่ใช้อีเมลนี้')
+    return render(request, 'login.html')
+
+def all_courses(request):
+    # ดึงเฉพาะคอร์สที่มีสถานะเป็น 'approved'
+    approved_courses = Course.objects.filter(status='approved')
+
+    # ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
+    if request.user.is_authenticated:
+        # หากเข้าสู่ระบบแล้ว แสดงหน้า `all_courses.html`
+        return render(request, 'all_courses.html', {'courses': approved_courses})
+    else:
+        # หากยังไม่ได้เข้าสู่ระบบ แสดงหน้า `guest_all_courses.html`
+        return render(request, 'guest_all_courses.html', {'courses': approved_courses})
+
+
+@login_required
+def profile_view(request):
+    return render(request, 'profile.html', {'user': request.user})
+
+def logout_view(request):
+    logout(request)  # ลบ session ของผู้ใช้
+    return redirect('home')  # เปลี่ยนเป็นหน้าแรกหลังจากล็อกเอาต์
+
+
+def update_profile(request):
+    if request.method == 'POST':
+        user = request.user
+        user.username = request.POST['username']
+        user.first_name = request.POST['first_name']
+        user.last_name = request.POST['last_name']
+        user.email = request.POST['email']
+        user.save()
+        return redirect('profile')
+    return render(request, 'edit_profile.html')
+
+def check_password(request):
+    return render(request, 'check_password.html')
+
+def verify_password(request):
+    if request.method == 'POST':
+        current_password = request.POST['current_password']
+        if request.user.check_password(current_password):
+            return redirect('change_password')
+        else:
+            return render(request, 'check_password.html', {'error_message': 'รหัสผ่านไม่ถูกต้อง'})
+    return redirect('check_password')
+
+def change_password(request):
+    if request.method == 'POST':
+        new_password = request.POST['new_password']
+        confirm_new_password = request.POST['confirm_new_password']
+        if new_password == confirm_new_password:
+            request.user.set_password(new_password)
+            request.user.save()
+            login(request, request.user)  # Log the user back in
+            return redirect('profile')
+    return render(request, 'change_password.html')

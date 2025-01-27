@@ -1,0 +1,48 @@
+{% extends 'instructor/base_instructor.html' %}
+{% load static %}
+{% block title %}คอร์สเรียนแบบวิดีโอ{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/instructor/video_courses.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="body-container">
+    <div class="content-wrapper">
+        <div class="video-course-container">
+            <div class="header-section">
+                <h1 class="page-title">คอร์สเรียนแบบวิดีโอ</h1>
+                <a href="{% url 'add_video_course' %}" class="add-course-btn">เพิ่มคอร์สเรียน</a>
+            </div>
+
+            <div class="table-section">
+                <table class="video-course-table">
+                    <thead>
+                        <tr>
+                            <th>รายการ</th>
+                            <th>ชื่อคอร์สเรียน</th>
+                            <th>ราคา</th>
+                            <th>สร้าง</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for course in courses %}
+                        <tr>
+                            <td><input type="checkbox" class="select-course"></td>
+                            <td>
+                                <div class="course-info">
+                                    <img src="{{ course.image_url }}" alt="รูปภาพคอร์ส" class="course-image">
+                                    <span>{{ course.name }}</span>
+                                </div>
+                            </td>
+                            <td>฿ {{ course.price }}</td>
+                            <td>{{ course.duration }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

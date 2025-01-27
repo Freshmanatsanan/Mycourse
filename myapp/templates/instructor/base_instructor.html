@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}I say ROAR{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/instructor/navbar_instructor.css' %}">
+    <link rel="stylesheet" href="{% static 'css/instructor/header_instructor.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        {% include 'instructor/navbar_instructor.html' %}
+        
+        <!-- Header -->
+        {% include 'instructor/header_instructor.html' %}
+
+        <!-- Main Content -->
+        <div class="main-content">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,8 @@
+Django>=5.1
+gunicorn
+PyMySQL
+dj-database-url
+whitenoise
+djangorestframework
+bcrypt
+djangorestframework-simplejwt

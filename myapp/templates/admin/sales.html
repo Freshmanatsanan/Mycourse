@@ -1,0 +1,56 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin/sales.css' %}">
+{% endblock %}
+
+{% block title %}รายการการขาย{% endblock %}
+
+{% block content %}
+<body class="body-wrapper">
+    <div class="dashboard-container">
+        <h1 class="dashboard-title">รายการการจองคอร์สเรียน</h1>
+        <div class="sales-summary">
+            <a href="{#}" class="summary-box {% if active_tab == 'video' %}active{% endif %}">
+                <h3>ออเดอร์ซื้อคอร์สวิดีโอ</h3>
+                <p>{{ video_orders_count }} รายการ</p>
+            </a>
+            <a href="{#}" class="summary-box {% if active_tab == 'booking' %}active{% endif %}">
+                <h3>ออเดอร์การจองคอร์ส</h3>
+                <p>{{ booking_orders_count }} รายการ</p>
+            </a>
+        </div>
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>ชื่อคอร์ส</th>
+                    <th>ชื่อลูกค้า</th>
+                    <th>สลิปการโอน</th>
+                    <th>อีเมลลูกค้า</th>
+                    <th>สถานะ</th>
+                    <th>เวลาการจอง</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td>{{ order.course_name }}</td>
+                    <td>{{ order.customer_name }}</td>
+                    <td>
+                        
+                        <img src="{{ order.transfer_slip.url }}" alt="สลิป" class="slip-image">
+                    
+                    <td>{{ order.email }}</td>
+                    <td>{{ order.status }}</td>
+                    <td>{{ order.order_date }}</td>
+                </tr>
+                
+                <tr>
+                    <td colspan="6" class="text-center">ไม่มีข้อมูลการจอง</td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+</body>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin/users_teachers.css' %}">
+{% endblock %}
+
+{% block title %}รายชื่อสมาชิกและผู้สอน{% endblock %}
+
+{% block content %}
+<body class="body-wrapper">
+    <div class="dashboard-container">
+        <h1 class="dashboard-title">รายชื่อสมาชิกและผู้สอน</h1>
+        <div class="user-type-buttons">
+            <button id="membersBtn" class="btn-tab active">รายชื่อสมาชิก</button>
+            <button id="teachersBtn" class="btn-tab">รายชื่อผู้สอน</button>
+        </div>
+        <div id="membersList" class="user-list">
+            <h2 class="list-title">รายชื่อสมาชิก</h2>
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>ชื่อ</th>
+                        <th>นามสกุล</th>
+                        <th>อีเมล</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr>
+                        <td>{{ member.id }}</td>
+                        <td>{{ member.first_name }}</td>
+                        <td>{{ member.last_name }}</td>
+                        <td>{{ member.email }}</td>
+                    </tr>
+                 
+                </tbody>
+            </table>
+        </div>
+        <div id="teachersList" class="user-list hidden">
+            <h2 class="list-title">รายชื่อผู้สอน</h2>
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>ชื่อ</th>
+                        <th>นามสกุล</th>
+                        <th>อีเมล</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr>
+                        <td>{{ teacher.id }}</td>
+                        <td>{{ teacher.first_name }}</td>
+                        <td>{{ teacher.last_name }}</td>
+                        <td>{{ teacher.email }}</td>
+                    </tr>
+                   
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+
+<script>
+    document.getElementById('membersBtn').addEventListener('click', function() {
+        document.getElementById('membersList').classList.remove('hidden');
+        document.getElementById('teachersList').classList.add('hidden');
+        this.classList.add('active');
+        document.getElementById('teachersBtn').classList.remove('active');
+    });
+
+    document.getElementById('teachersBtn').addEventListener('click', function() {
+        document.getElementById('teachersList').classList.remove('hidden');
+        document.getElementById('membersList').classList.add('hidden');
+        this.classList.add('active');
+        document.getElementById('membersBtn').classList.remove('active');
+    });
+</script>
+{% endblock %}

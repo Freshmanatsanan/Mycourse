@@ -1,0 +1,65 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin/review_video_courses.css' %}">
+{% endblock %}
+{% block title %}ตรวจสอบคอร์สเรียนแบบวิดีโอ{% endblock %}
+
+{% block content %}
+<body class="body-wrapper">
+    <div class="dashboard-container">
+        <h1 class="dashboard-title">ตรวจสอบคอร์สเรียนแบบวิดีโอ</h1>
+        <table class="course-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>ชื่อคอร์ส</th>
+                    <th>คำอธิบาย</th>
+                    <th>ราคา</th>
+                    <th>ผู้สอน</th>
+                    <th>สร้างเมื่อ</th>
+                    <th>ลิงก์วิดีโอ</th>
+                    <th>QR Code การชำระเงิน</th>
+                    <th>การจัดการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ course.name }}</td>
+                    <td>{{ course.price }} ฿</td>
+                    <td>{{ course.instructor }}</td>
+                    <td>{{ course.created_at|date:"d/m/Y H:i" }}</td>
+
+
+                    <td><a href="{{ course.video_url }}" target="_blank">ดูวิดีโอ</a></td>
+                    <td>
+                        {% if course.payment_qr %}
+                        <img src="{{ course.payment_qr.url }}" alt="QR Code" class="qr-image">
+                        
+                        <form method="post" enctype="multipart/form-data" action="{#}">
+                            
+                            <input type="file" name="payment_qr" accept="image/*" required>
+                            <button type="submit" class="btn-upload">อัปโหลด</button>
+                        </form>
+                        {% else %}
+                            ไม่มี QR Code
+                        {% endif %}
+                    </td>
+                    
+                    <td>
+                        <a href="{#}" class="btn-approve">อนุมัติ</a>
+                        <a href="{#}" class="btn-reject">ส่งกลับไปแก้ไข</a>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td colspan="8" class="text-center">ไม่มีคอร์สที่รอการตรวจสอบ</td>
+                </tr>
+               
+            </tbody>
+        </table>
+    </div>
+</body>
+{% endblock %}
