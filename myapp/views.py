@@ -18,20 +18,15 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.contrib.auth import logout
-from django.shortcuts import redirect
 from rest_framework.decorators import api_view , permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.urls import reverse
-from .permissions import IsInstructor, IsAdmin
-
-
-
-
-#from django.contrib.auth import get_user_model
-
-#User = get_user_model()
+from .decorators import admin_required  , instructor_required  # นำเข้า Decorator
+from django.contrib.auth.models import User, Group  # นำเข้า Group
+from rest_framework.permissions import AllowAny
+from django.core.exceptions import ObjectDoesNotExist
 
 
 def register(request):
@@ -54,9 +49,7 @@ def register(request):
             elif User.objects.filter(email=email).exists():
                 messages.error(request, 'อีเมลนี้ถูกใช้ไปแล้ว')
             else:
-                from django.contrib.auth.hashers import make_password
-
-                # ใช้ make_password สำหรับการเข้ารหัสรหัสผ่าน
+                # สร้างผู้ใช้ใหม่
                 user = User.objects.create(
                     username=username,
                     first_name=first_name,
@@ -65,6 +58,14 @@ def register(request):
                     password=make_password(password)
                 )
                 user.save()
+
+                # เพิ่มผู้ใช้เข้า Group 'Member' โดยค่าเริ่มต้น
+                try:
+                    member_group = Group.objects.get(name='Member')  # ค้นหา Group ชื่อ 'Member'
+                    user.groups.add(member_group)  # เพิ่มผู้ใช้เข้า Group
+                except Group.DoesNotExist:
+                    messages.warning(request, 'Group "Member" ยังไม่ได้ถูกสร้างในระบบ')
+
                 messages.success(request, 'สร้างบัญชีสำเร็จแล้ว')
                 return redirect('login')
 
@@ -73,30 +74,30 @@ def register(request):
 
 def login_view(request):
     if request.method == 'POST':
-        username = request.POST['username']
+        email = request.POST['email']
         password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
 
-        if user is not None:
-            login(request, user)
+        try:
+            user = User.objects.get(email=email)
+            user = authenticate(request, username=user.username, password=password)
+            if user:
+                login(request, user)
 
-            # ตรวจสอบบทบาทผ่านฟิลด์ role
-            if hasattr(user, 'role'):
-                if user.role == 'admin':  # หากเป็น Admin
-                    return redirect('admin_dashboard')
-                elif user.role == 'instructor':  # หากเป็น Instructor
+                if user.groups.filter(name='Instructor').exists():
                     return redirect('instructor_sales')
-                elif user.role == 'member':  # หากเป็น Member
+                elif user.groups.filter(name='Admin').exists():
+                    return redirect('admin_dashboard')
+                elif user.groups.filter(name='Member').exists():
                     return redirect('home')
                 else:
-                    messages.error(request, 'บทบาทผู้ใช้งานไม่ถูกต้อง')
-                    return redirect('login')  # Redirect กลับไปที่หน้า login หาก role ไม่ถูกต้อง
+                    messages.error(request, 'บทบาทของผู้ใช้งานไม่ถูกต้อง')
             else:
-                messages.error(request, 'ไม่พบข้อมูลบทบาทของผู้ใช้งาน')
-                return redirect('login')
-        else:
-            messages.error(request, 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
+                messages.error(request, 'อีเมลหรือรหัสผ่านไม่ถูกต้อง')
+        except User.DoesNotExist:
+            messages.error(request, 'ไม่พบบัญชีผู้ใช้งานในระบบ')
+
     return render(request, 'login.html')
+
 
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -113,7 +114,11 @@ def get_user_data(request):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])  # อนุญาตให้ทุกคนเข้าถึง API ได้
 def register_api(request):
+    """
+    API สำหรับสมัครสมาชิก และเพิ่มเข้า Group ของ Django Admin
+    """
     username = request.data.get('username')
     first_name = request.data.get('first_name')
     last_name = request.data.get('last_name')
@@ -121,13 +126,19 @@ def register_api(request):
     password = request.data.get('password')
     password2 = request.data.get('password2')
 
+    if not username or not email or not password:
+        return Response({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=status.HTTP_400_BAD_REQUEST)
+
     if password != password2:
         return Response({"error": "รหัสผ่านไม่ตรงกัน"}, status=status.HTTP_400_BAD_REQUEST)
+
     if User.objects.filter(username=username).exists():
         return Response({"error": "ชื่อผู้ใช้นี้มีอยู่แล้ว"}, status=status.HTTP_400_BAD_REQUEST)
+
     if User.objects.filter(email=email).exists():
         return Response({"error": "อีเมลนี้ถูกใช้ไปแล้ว"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # สร้างบัญชีผู้ใช้
     user = User.objects.create(
         username=username,
         first_name=first_name,
@@ -136,28 +147,52 @@ def register_api(request):
         password=make_password(password)
     )
     user.save()
+
+    # เพิ่มผู้ใช้เข้า Group 'Member' โดยค่าเริ่มต้น
+    try:
+        member_group = Group.objects.get(name='Member')  # ค้นหา Group 'Member'
+        user.groups.add(member_group)  # เพิ่มผู้ใช้เข้า Group
+    except ObjectDoesNotExist:
+        pass  # ถ้าไม่มี Group ก็ข้ามไป
+
     return Response({"message": "สร้างบัญชีสำเร็จแล้ว"}, status=status.HTTP_201_CREATED)
 
+
 @api_view(['POST'])
+@permission_classes([AllowAny])  # อนุญาตให้ทุกคนเข้าถึง API ได้
 def login_api(request):
-    email = request.data.get('email')  # ใช้ email แทน username
+    """
+    API สำหรับเข้าสู่ระบบและรับ JWT Token
+    """
+    email = request.data.get('email')
     password = request.data.get('password')
 
     if not email or not password:
         return Response({'error': 'กรุณากรอกอีเมลและรหัสผ่าน'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # ค้นหาผู้ใช้ด้วยอีเมล
+        # ค้นหาผู้ใช้โดยใช้ email
         user = User.objects.get(email=email)
-        # ใช้ username ของ user ที่เจอสำหรับ authenticate
         user = authenticate(username=user.username, password=password)
 
-        if user is not None:
-            # สร้าง JWT tokens
+        if user:
+            # สร้าง JWT Token
             refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+
+            # ตรวจสอบสิทธิ์จาก Django Groups
+            user_group = "Member"  # ค่าเริ่มต้น
+
+            if user.groups.filter(name='Instructor').exists():
+                user_group = "Instructor"
+            elif user.groups.filter(name='Admin').exists():
+                user_group = "Admin"
+
             return Response({
-                'access': str(refresh.access_token),
+                'access': access_token,
                 'refresh': str(refresh),
+                'group': user_group,
+                'message': 'เข้าสู่ระบบสำเร็จ'
             }, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -258,13 +293,15 @@ def send_back_course(request, course_id):
         # กรณี GET method
         return HttpResponseRedirect(reverse('review_booking_courses'))
     
-
-@permission_classes([IsAdmin])
+@login_required
+@admin_required
 def admin_dashboard(request):
 
     return render(request, 'admin/dashboard_admin.html')
 
-@permission_classes([IsInstructor])
+
+@login_required
+@instructor_required
 def add_banner(request):
     if request.method == 'POST':
         image = request.FILES.get('banner_image')
@@ -299,6 +336,7 @@ def add_video_course_details(request):
 
 
 
+@instructor_required
 def add_course_details(request, course_id):
     course = get_object_or_404(Course, id=course_id)
 
@@ -375,6 +413,7 @@ def video_courses(request):
     return render(request, "instructor/video_courses.html")
 
 
+@instructor_required
 def add_course(request):
     if request.method == 'POST':
         title = request.POST.get('title')
@@ -399,6 +438,8 @@ def add_course(request):
 
     return render(request, 'instructor/add_course.html')
 
+
+@instructor_required
 def edit_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
@@ -418,6 +459,7 @@ def edit_course(request, course_id):
     return render(request, 'instructor/edit_course.html', {'course': course})
 
 
+@instructor_required
 def edit_course_details(request, course_id):
     # ดึงข้อมูลรายละเอียดคอร์ส
     course_details = get_object_or_404(CourseDetails, course__id=course_id)
@@ -450,10 +492,13 @@ def edit_course_details(request, course_id):
     })
 
 
+@instructor_required
 def reservation_courses(request):
     courses = Course.objects.all()
     return render(request, 'instructor/reservation_courses.html', {'courses': courses})
 
+
+@instructor_required
 def instructor_sales(request):
     return render(request, 'instructor/sales.html')
 
@@ -482,7 +527,7 @@ def home(request):
     })  # สำหรับผู้ที่ยังไม่ได้เป็นสมาชิก
 
 
-def login_view(request):
+#def login_view(request):
     if request.method == 'POST':
         email = request.POST['email']
         password = request.POST['password']

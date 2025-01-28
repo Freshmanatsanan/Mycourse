@@ -52,6 +52,8 @@ REST_FRAMEWORK = {
     ),
 }
 
+
+
 # ตั้งค่า Lifetime ของ Token
 from datetime import timedelta
 
@@ -144,8 +146,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 STATICFILES_DIRS = [
-    BASE_DIR / "static",  # ระบุ path สำหรับ static
+    os.path.join(BASE_DIR, "static"),
 ]
 
 MEDIA_URL = '/media/'
@@ -176,6 +179,5 @@ CSRF_TRUSTED_ORIGINS = [
     'https://my-django-project-production.up.railway.app'
 ]
 
-#AUTH_USER_MODEL = 'myapp.CustomUser'
 
 

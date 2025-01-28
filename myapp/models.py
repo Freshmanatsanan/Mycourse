@@ -1,17 +1,5 @@
 from django.db import models
-#from django.contrib.auth.models import AbstractUser
 
-
-#class CustomUser(AbstractUser):
-   # ROLE_CHOICES = (
-    #    ('member', 'Member'),
-    #    ('instructor', 'Instructor'),
-    #    ('admin', 'Admin'),
-    #)
-   # role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
-
-   # def __str__(self):
-    #    return f"{self.username} ({self.get_role_display()})"
 
 
 class Course(models.Model):
@@ -157,3 +145,5 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+    
+
