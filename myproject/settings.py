@@ -177,8 +177,5 @@ PASSWORD_HASHERS = [
 
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://my-django-project-production.up.railway.app'
+    'https://mycourse-production.up.railway.app',
 ]
-
-
-
