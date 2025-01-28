@@ -24,10 +24,11 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-secret-key')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [
-    'my-django-project-production.up.railway.app',
-    '127.0.0.1',  # สำหรับ Local Development
-    'localhost'
+    'localhost',
+    '127.0.0.1',
+    'mycourse-production.up.railway.app',  # เพิ่มโดเมนของ Railway
 ]
+
 
 
 
