@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 
@@ -22,9 +23,11 @@ class Course(models.Model):
         return self.title
     
 class Staff(models.Model):
-    name = models.CharField(max_length=100)  # ชื่อบุคลากร
-    subject = models.CharField(max_length=200)  # วิชาหรือบทบาท
-    image = models.ImageField(upload_to='staff_images/')  # รูปภาพบุคลากร
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True) 
+    name = models.CharField(max_length=100)  # ชื่อที่ใช้แสดง
+    subject = models.CharField(max_length=200)  # วิชาที่สอน
+    image = models.ImageField(upload_to="staff_images/", blank=True, null=True)  # อัปโหลดรูปภาพ
+    created_at = models.DateTimeField(auto_now_add=True)  # วันเวลาที่เพิ่ม
 
     def __str__(self):
         return self.name

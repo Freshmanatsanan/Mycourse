@@ -43,23 +43,47 @@
 }
 
 /* Logout Button */
-.logout {
-    text-align: center;
-    margin-top: auto; /* เลื่อน Logout ไปอยู่ด้านล่าง */
-    padding-top: 20px; /* เพิ่มช่องว่างด้านบน */
+.logout-container {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
 }
 
-.logout a {
-    text-decoration: none;
-    font-size: 16px;
-    font-weight: bold;
-    color: #ff5733;
+
+.logout-container {
+    position: absolute;
+    bottom: 50px; /* ปรับให้ห่างจากขอบล่าง */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 85%;
+}
+
+/* ปุ่ม Logout */
+.logout-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
+    color: rgb(255, 0, 0);
+    padding: 12px 20px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+    transition: 0.3s;
+    margin-bottom: 10px; /* ปรับระยะขอบล่าง */
 }
 
-.logout a i {
-    font-size: 20px;
+/* ไอคอน Logout */
+.logout-icon {
+    width: 22px;
+    height: 22px;
+}
+
+/* Hover Effect */
+.logout-btn:hover {
+    background-color: #ffffff; /* สีแดงเข้มขึ้นเมื่อ Hover */
 }

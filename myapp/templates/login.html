@@ -21,8 +21,8 @@
                     <i class="fas fa-envelope"></i>
                 </div>
                 <div class="input-group">
-                    <input type="password" name="password" placeholder="รหัสผ่าน" required>
-                    <i class="fas fa-eye"></i>
+                    <input type="password" id="password" name="password" placeholder="รหัสผ่าน" required>
+                    <i class="fas fa-eye-slash" id="togglePassword"></i>
                 </div>
                 <div class="forgot-password">
                     <a href="#"><i class="fas fa-key"></i> ลืมรหัสผ่าน</a>
@@ -32,5 +32,22 @@
             <a href="{% url 'register' %}" class="register-button">ลงทะเบียน</a>
         </div>
     </div>
+    <script>
+        document.getElementById("togglePassword").addEventListener("click", function () {
+            const passwordInput = document.getElementById("password");
+            const icon = this;
+
+            if (passwordInput.type === "password") {
+                passwordInput.type = "text";
+                icon.classList.remove("fa-eye-slash");
+                icon.classList.add("fa-eye");
+            } else {
+                passwordInput.type = "password";
+                icon.classList.remove("fa-eye");
+                icon.classList.add("fa-eye-slash");
+            }
+        });
+
+    </script>
 </body>
 </html>

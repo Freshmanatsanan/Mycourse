@@ -1,5 +1,7 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/admin/navbar_admin.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
 <div class="sidebar">
     <!-- Logo -->
 
@@ -23,6 +25,11 @@
         </li>
     </ul>
 
-    <!-- Logout Button -->
+    <div class="logout-container">
+        <a href="{% url 'admin_logout' %}" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+        </a>
+        
+    </div>
 
 </div>

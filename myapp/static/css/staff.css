@@ -34,10 +34,10 @@ header {
 
 /* Staff Grid */
 .staff-grid {
-    display: grid;
-
-    gap: 20px;
-    justify-content: center;
+    display: flex;  /* ใช้ flexbox */
+    flex-wrap: wrap; /* ให้แสดงผลเป็นแถวและขึ้นบรรทัดใหม่ถ้าจอเล็ก */
+    justify-content: center; /* จัดให้อยู่ตรงกลาง */
+    gap: 20px; /* ระยะห่างระหว่างการ์ด */
 }
 
 /* Staff Card */

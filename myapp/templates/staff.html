@@ -21,13 +21,17 @@
     <main class="staff-container">
         <h1 class="page-title">บุคลากร</h1>
         <div class="staff-grid">
-
+            {% for staff in staffs %}
             <div class="staff-card">
                 <div class="staff-icon">
                     <img src="{{ staff.image.url }}" alt="{{ staff.name }}">
                 </div>
                 <p>{{ staff.subject }} โดย {{ staff.name }}</p>
             </div>
+            {% empty %}
+            <p style="text-align: center; color: red;">ไม่มีข้อมูลบุคลากร</p>
+            {% endfor %}
+        </div>
 
         </div>
     </main>

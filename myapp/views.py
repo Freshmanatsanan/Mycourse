@@ -506,8 +506,50 @@ def contact(request):
     return render(request, 'contact.html')
 
 def staff_list(request):
-    staff_list = Staff.objects.all()  # ดึงข้อมูลบุคลากรจากฐานข้อมูล
-    return render(request, 'staff.html', {'staff_list': staff_list})
+    staffs = Staff.objects.all()  # ดึงข้อมูลบุคลากรทั้งหมด
+    return render(request, 'staff.html', {'staffs': staffs}) 
+
+def user_list(request):
+    """ ดึงรายชื่อสมาชิกและผู้สอนจาก Django Group """
+    try:
+        instructor_group = Group.objects.get(name="Instructor")
+        instructors = User.objects.filter(groups=instructor_group).order_by("first_name")
+    except Group.DoesNotExist:
+        instructors = []
+
+    try:
+        member_group = Group.objects.get(name="Member")
+        members = User.objects.filter(groups=member_group).order_by("first_name")
+    except Group.DoesNotExist:
+        members = []
+
+    return render(request, "admin/users_teachers.html", {
+        "instructors": instructors,
+        "members": members  # ✅ ต้องมี members ส่งไปที่ template
+    })
+
+def add_staff(request, user_id):  # รับ user_id เป็นพารามิเตอร์
+    """ เพิ่มโปรไฟล์ผู้สอน """
+
+    user = get_object_or_404(User, id=user_id)  # ดึงข้อมูลผู้ใช้จาก User Model
+
+    if request.method == "POST":
+        display_name = request.POST.get("display_name")
+        subject = request.POST.get("subject")
+        image = request.FILES.get("image")
+
+        if display_name and subject:
+            # บันทึกข้อมูลลงในตาราง myapp_staff
+            new_staff = Staff(name=display_name, subject=subject, image=image)
+            new_staff.save()
+
+            messages.success(request, "เพิ่มโปรไฟล์ผู้สอนสำเร็จ!")
+            return redirect("user_list")  # กลับไปที่หน้ารายชื่อผู้สอน
+        else:
+            messages.error(request, "กรุณากรอกข้อมูลให้ครบถ้วน!")
+
+    return render(request, "admin/add_staff.html", {"user": user})
+
 
 
 
@@ -527,25 +569,7 @@ def home(request):
     })  # สำหรับผู้ที่ยังไม่ได้เป็นสมาชิก
 
 
-#def login_view(request):
-    if request.method == 'POST':
-        email = request.POST['email']
-        password = request.POST['password']
-        
-        try:
-            # ค้นหา username จาก email
-            user = User.objects.get(email=email)
-            username = user.username
-            # ตรวจสอบการยืนยันตัวตน
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                login(request, user)
-                return redirect('home')  # Redirect to home page
-            else:
-                messages.error(request, 'อีเมลหรือรหัสผ่านไม่ถูกต้อง')
-        except User.DoesNotExist:
-            messages.error(request, 'ไม่พบบัญชีผู้ใช้ที่ใช้อีเมลนี้')
-    return render(request, 'login.html')
+
 
 def all_courses(request):
     # ดึงเฉพาะคอร์สที่มีสถานะเป็น 'approved'
@@ -564,9 +588,24 @@ def all_courses(request):
 def profile_view(request):
     return render(request, 'profile.html', {'user': request.user})
 
+@login_required
 def logout_view(request):
-    logout(request)  # ลบ session ของผู้ใช้
-    return redirect('home')  # เปลี่ยนเป็นหน้าแรกหลังจากล็อกเอาต์
+    logout(request)  # ลบ session ของ User ทั่วไป
+    messages.success(request, "ออกจากระบบสำเร็จ")
+    return redirect('home')  # ส่งกลับไปยังหน้าแรก
+
+@login_required
+@instructor_required
+def instructor_logout(request):
+    logout(request)  # ลบ session ของ Instructor
+    messages.success(request, "คุณได้ออกจากระบบในฐานะผู้สอนแล้ว")
+    return redirect('login')  # ส่งกลับไปหน้า Login หรือหน้าที่เหมาะสม
+
+@login_required
+def admin_logout(request):
+    logout(request)  # ออกจากระบบ
+    messages.success(request, "คุณได้ออกจากระบบในฐานะผู้ดูแลระบบแล้ว")
+    return redirect('login')  # เปลี่ยนเส้นทางไปยังหน้า Login ของ Admin
 
 
 def update_profile(request):

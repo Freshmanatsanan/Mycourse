@@ -13,7 +13,9 @@ urlpatterns = [
     path('verify-password/', views.verify_password, name='verify_password'),
     path('change-password/', views.change_password, name='change_password'),
     path('all-courses/', views.all_courses, name='all_courses'),
+    path('user-list/', views.user_list, name='user_list'),  # ✅ ตรวจสอบเส้นทาง
     path('staff/', views.staff_list, name='staff_list'),  # URL สำหรับหน้า "บุคลากร"
+    path('staff/add/<int:user_id>/', views.add_staff, name='add_staff'),  # ✅ เพิ่ม <int:user_id>
     path('contact/', views.contact, name='contact'),  # เพิ่ม path สำหรับหน้าติดต่อเรา
     path('instructor/', views.instructor_sales, name='instructor_sales'),
     path('ireservation/', views.reservation_courses, name='reservation_courses'),
@@ -41,7 +43,10 @@ urlpatterns = [
     path('delete-selected-courses/', views.delete_selected_courses, name='delete_selected_courses'),
     path('profile/', views.profile_view, name='profile'),
     path('logout/', views.logout_view, name='logout'),
-     path('courses/<int:course_id>/', views.course_details, name='course_details'),
+    path('instructor/logout/', views.instructor_logout, name='instructor_logout'),  # Logout สำหรับ Instructor
+    path('admin_logout/', views.admin_logout, name='admin_logout'), 
+    path('courses/<int:course_id>/', views.course_details, name='course_details'),
+    
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # สำหรับ API
     path('api/register/', views.register_api, name='register_api'),

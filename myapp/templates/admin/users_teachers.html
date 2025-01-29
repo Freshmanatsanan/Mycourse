@@ -26,19 +26,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    
-                    <tr>
-                        <td>{{ member.id }}</td>
-                        <td>{{ member.first_name }}</td>
-                        <td>{{ member.last_name }}</td>
-                        <td>{{ member.email }}</td>
-                    </tr>
-                 
+                    {% if members %}
+                        {% for member in members %}
+                            <tr>
+                                <td>{{ member.id }}</td>
+                                <td>{{ member.first_name }}</td>
+                                <td>{{ member.last_name }}</td>
+                                <td>{{ member.email }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: red;">ไม่มีข้อมูลสมาชิก</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
         <div id="teachersList" class="user-list hidden">
             <h2 class="list-title">รายชื่อผู้สอน</h2>
+
             <table class="user-table">
                 <thead>
                     <tr>
@@ -46,17 +53,28 @@
                         <th>ชื่อ</th>
                         <th>นามสกุล</th>
                         <th>อีเมล</th>
+                        <th>ข้อมูลเพิ่มเติม</th>
+                        
                     </tr>
                 </thead>
                 <tbody>
-                    
-                    <tr>
-                        <td>{{ teacher.id }}</td>
-                        <td>{{ teacher.first_name }}</td>
-                        <td>{{ teacher.last_name }}</td>
-                        <td>{{ teacher.email }}</td>
-                    </tr>
-                   
+                    {% if instructors %}
+                        {% for instructor in instructors %}
+                            <tr>
+                                <td>{{ instructor.id }}</td>
+                                <td>{{ instructor.first_name }}</td>
+                                <td>{{ instructor.last_name }}</td>
+                                <td>{{ instructor.email }}</td>
+                                <td>
+                                    <a href="{% url 'add_staff' instructor.id %}" class="btn-add-profile">เพิ่มโปรไฟล์</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: red;">ไม่มีข้อมูลผู้สอน</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
