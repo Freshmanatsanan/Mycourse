@@ -220,6 +220,24 @@ def get_approved_courses(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])  # อนุญาตให้ทุกคนเข้าถึง API นี้
+def banners_api(request):
+    """
+    API สำหรับดึงรายการแบนเนอร์ทั้งหมด
+    """
+    try:
+        banners = Banner.objects.all()
+        banners_data = [
+            {
+                'id': banner.id,
+                'image_url': request.build_absolute_uri(banner.image.url) if banner.image else None
+            }
+            for banner in banners
+        ]
+        return Response(banners_data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
