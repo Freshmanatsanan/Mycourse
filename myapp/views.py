@@ -27,8 +27,7 @@ from .decorators import admin_required  , instructor_required  # นำเข้
 from django.contrib.auth.models import User, Group  # นำเข้า Group
 from rest_framework.permissions import AllowAny
 from django.core.exceptions import ObjectDoesNotExist
-
-
+from django.http import JsonResponse
 def register(request):
     if request.method == 'POST':
         username = request.POST['username']
@@ -98,6 +97,24 @@ def login_view(request):
 
     return render(request, 'login.html')
 
+def staff_list_api(request):
+    """
+    API สำหรับดึงข้อมูลบุคลากรทั้งหมด
+    """
+    domain = request.build_absolute_uri('/').strip('/')
+    staffs = Staff.objects.all()
+
+    staff_data = [
+        {
+            "id": staff.id,
+            "name": staff.name,
+            "subject": staff.subject,
+            "image_url": f"{domain}{staff.image.url}" if staff.image else None,
+        }
+        for staff in staffs
+    ]
+
+    return JsonResponse(staff_data, safe=False)
 
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------

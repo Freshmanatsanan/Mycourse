@@ -56,6 +56,7 @@ urlpatterns = [
     path('api/user/', views.get_user_data, name='get_user_data'),
     path('api/approved-courses/', views.get_approved_courses, name='get_approved_courses'),
     path('api/banners/', views.banners_api, name='banners_api'),  # API สำหรับดึงแบนเนอร์
+    path('api/staffs/', views.staff_list_api, name='staff_list_api'),
 
 ]
 
