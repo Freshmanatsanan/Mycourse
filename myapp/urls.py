@@ -47,12 +47,14 @@ urlpatterns = [
     path('admin_logout/', views.admin_logout, name='admin_logout'), 
     path('courses/<int:course_id>/', views.course_details, name='course_details'),
     
+    
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # สำหรับ API
     path('api/register/', views.register_api, name='register_api'),
     path('api/login/', views.login_api, name='login_api'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # สำหรับ Refresh Token
     path('api/user/', views.get_user_data, name='get_user_data'),
+    path('api/approved-courses/', views.get_approved_courses, name='get_approved_courses'),
 
 ]
 

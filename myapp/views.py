@@ -199,6 +199,28 @@ def login_api(request):
 
     except User.DoesNotExist:
         return Response({'error': 'ไม่พบผู้ใช้งานในระบบ'}, status=status.HTTP_404_NOT_FOUND)
+    
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])  # อนุญาตให้ทุกคนสามารถเข้าถึง API นี้ได้
+def get_approved_courses(request):
+    try:
+        # ดึงข้อมูลคอร์สที่อนุมัติแล้ว
+        approved_courses = Course.objects.filter(status='approved')
+        # สร้างข้อมูลสำหรับแสดงผล (ต้องการแค่บางฟิลด์)
+        courses_data = []
+        for course in approved_courses:
+            courses_data.append({
+                'id': course.id,
+                'title': course.title,
+                'price': course.price,
+                'image_url': course.image.url if course.image else None,
+                'instructor': course.instructor,
+            })
+        return Response(courses_data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
