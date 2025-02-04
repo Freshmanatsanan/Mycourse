@@ -36,8 +36,9 @@ from .models import CourseBooking
 from django.db.models import Count
 from django.core.paginator import Paginator
 
+
 def register(request):
-    if request.method == 'POST':
+    if request.method == 'POST':    
         username = request.POST['username']
         first_name = request.POST['first_name']
         last_name = request.POST['last_name']
@@ -273,6 +274,52 @@ def banners_api(request):
         return Response(banners_data, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+#---------------------------------------------api สมาชิก --------------------------------------------------------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profile_api(request):
+    """
+    API สำหรับดึงข้อมูลโปรไฟล์ของผู้ใช้ที่ล็อกอินอยู่
+    """
+    user = request.user
+    profile = user.profile
+    data = {
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "profile_picture": request.build_absolute_uri(profile.profile_picture.url) if profile.profile_picture else None
+    }
+    return Response(data, status=status.HTTP_200_OK)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_profile_api(request):
+    """
+    API สำหรับอัปเดตโปรไฟล์ของผู้ใช้ที่ล็อกอินอยู่
+    """
+    user = request.user
+    profile = user.profile
+
+    user.username = request.data.get('username', user.username)
+    user.first_name = request.data.get('first_name', user.first_name)
+    user.last_name = request.data.get('last_name', user.last_name)
+    user.email = request.data.get('email', user.email)
+    
+    if 'profile_picture' in request.FILES:
+        if profile.profile_picture:
+            profile.profile_picture.delete()  # ลบไฟล์รูปเก่าก่อนอัปโหลดใหม่
+        profile.profile_picture = request.FILES['profile_picture']
+
+    user.save()
+    profile.save()
+
+    return Response({"message": "อัปเดตโปรไฟล์สำเร็จ"}, status=status.HTTP_200_OK)
+
+
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -749,26 +796,8 @@ def all_courses(request):
 def profile_view(request):
     return render(request, 'profile.html', {'user': request.user, 'profile': request.user.profile})
 
-@login_required
-def logout_view(request):
-    logout(request)  # ลบ session ของ User ทั่วไป
-    messages.success(request, "ออกจากระบบสำเร็จ")
-    return redirect('home')  # ส่งกลับไปยังหน้าแรก
 
 @login_required
-@instructor_required
-def instructor_logout(request):
-    logout(request)  # ลบ session ของ Instructor
-    messages.success(request, "คุณได้ออกจากระบบในฐานะผู้สอนแล้ว")
-    return redirect('login')  # ส่งกลับไปหน้า Login หรือหน้าที่เหมาะสม
-
-@login_required
-def admin_logout(request):
-    logout(request)  # ออกจากระบบ
-    messages.success(request, "คุณได้ออกจากระบบในฐานะผู้ดูแลระบบแล้ว")
-    return redirect('login')  # เปลี่ยนเส้นทางไปยังหน้า Login ของ Admin
-
-
 def update_profile(request):
     if request.method == 'POST':
         user = request.user
@@ -788,6 +817,27 @@ def update_profile(request):
         return redirect('profile')
     
     return render(request, 'edit_profile.html', {'user': request.user, 'profile': request.user.profile})
+
+
+@login_required
+def logout_view(request):
+    logout(request)  # ลบ session ของ User ทั่วไป
+    messages.success(request, "ออกจากระบบสำเร็จ")
+    return redirect('home')  # ส่งกลับไปยังหน้าแรก
+
+@login_required
+@instructor_required
+def instructor_logout(request):
+    logout(request)  # ลบ session ของ Instructor
+    messages.success(request, "คุณได้ออกจากระบบในฐานะผู้สอนแล้ว")
+    return redirect('login')  # ส่งกลับไปหน้า Login หรือหน้าที่เหมาะสม
+
+@login_required
+def admin_logout(request):
+    logout(request)  # ออกจากระบบ
+    messages.success(request, "คุณได้ออกจากระบบในฐานะผู้ดูแลระบบแล้ว")
+    return redirect('login')  # เปลี่ยนเส้นทางไปยังหน้า Login ของ Admin
+
 
 
 def check_password(request):

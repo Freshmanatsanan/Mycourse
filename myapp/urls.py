@@ -80,6 +80,9 @@ urlpatterns = [
     path('api/approved-courses/', views.get_approved_courses, name='get_approved_courses'),
     path('api/banners/', views.banners_api, name='banners_api'),  # API สำหรับดึงแบนเนอร์
     path('api/staffs/', views.staff_list_api, name='staff_list_api'),
+    path('api/profile/', views.profile_api, name='profile_api'),
+    path('api/profile/update/', views.update_profile_api, name='update_profile_api'),
+
 
 ]
 
