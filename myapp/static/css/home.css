@@ -208,7 +208,9 @@ header {
     margin: 0 auto; /* จัดให้อยู่ตรงกลาง */
 }
 
-
+a {
+    text-decoration: none;
+}
 
 .btn-course-1 {
     display: inline-block;

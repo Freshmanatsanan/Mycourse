@@ -17,11 +17,14 @@
         <li class="{% if request.resolver_match.url_name == 'review_video_courses' %}active{% endif %}">
             <a href="{% url 'review_video_courses' %}">คอร์สเรียนแบบวิดีโอ</a>
         </li>
-        <li class="{% if request.resolver_match.url_name == 'sales'  %}active{% endif %}">
+        <li class="{% if request.resolver_match.url_name == 'sales'  or request.resolver_match.url_name == 'booking_detail'  %}active{% endif %}">
             <a href="{% url 'sales' %}">การขาย</a>
         </li>
         <li class="{% if request.resolver_match.url_name == 'user_list'  %}active{% endif %}">
             <a href="{% url 'user_list' %}">รายชื่อ</a>
+        </li>
+        <li class="{% if request.resolver_match.url_name == 'banners_admin'  %}active{% endif %}">
+            <a href="{% url 'banners_admin' %}">โฆษณา</a>
         </li>
     </ul>
 

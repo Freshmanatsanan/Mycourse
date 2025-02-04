@@ -1,0 +1,51 @@
+{% extends 'instructor/base_instructor.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/instructor/video_order_detail.css' %}">
+{% endblock %}
+
+{% block title %}รายละเอียดการซื้อคอร์สวิดีโอ{% endblock %}
+
+{% block content %}
+<body class="body-wrapper">
+    <div class="dashboard-container">
+        <h1 class="dashboard-title">รายละเอียดการซื้อ - {{ course.title }}</h1>
+
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>ชื่อลูกค้า</th>
+                    <th>อีเมล</th>
+                    <th>สลิปการโอน</th>
+                    <th>สถานะ</th>
+                    <th>เวลาการซื้อ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.user.get_full_name }}</td>
+                    <td>{{ order.user.email }}</td>
+                    <td>
+                        {% if order.payment_slip %}
+                            <a href="{{ order.payment_slip.url }}" target="_blank">
+                                <img src="{{ order.payment_slip.url }}" alt="สลิป" class="slip-image">
+                            </a>
+                        {% else %}
+                            <span class="text-muted">ไม่มีสลิป</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ order.status }}</td>
+                    <td>{{ order.created_at }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">ไม่มีข้อมูลการซื้อ</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+{% endblock %}

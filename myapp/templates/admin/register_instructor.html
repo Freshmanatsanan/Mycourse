@@ -1,0 +1,116 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin/register_instructor.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+{% endblock %}
+
+{% block title %}ลงทะเบียนผู้สอน{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <h1>ลงทะเบียนผู้สอน</h1>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- ✅ Upload Profile Picture -->
+        <div class="profile-upload">
+            <img id="profilePreview" src="{% static 'images/default-profile.png' %}" alt="โปรไฟล์" class="profile-preview">
+            <label for="profilePicture" class="upload-label">
+                <i class="fas fa-upload"></i> อัปโหลดรูปภาพ
+            </label>
+            <input type="file" id="profilePicture" name="profile_picture" class="input-file" accept="image/*" required>
+        </div>
+
+        <!-- ✅ Input Fields -->
+        <div class="input-group">
+            <label>ชื่อผู้ใช้ (Username):</label>
+            <div class="input-container">
+                <input type="text" name="username" required>
+                <i class="fas fa-user"></i>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>ชื่อ:</label>
+            <div class="input-container">
+                <input type="text" name="first_name" required>
+                <i class="fas fa-user"></i>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>นามสกุล:</label>
+            <div class="input-container">
+                <input type="text" name="last_name" required>
+                <i class="fas fa-user"></i>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>อีเมล:</label>
+            <div class="input-container">
+                <input type="email" name="email" required>
+                <i class="fas fa-envelope"></i>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>เบอร์โทร:</label>
+            <div class="input-container">
+                <input type="text" name="phone" required>
+                <i class="fas fa-phone"></i>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>อายุ:</label>
+            <div class="input-container">
+                <input type="number" name="age" required>
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>วิชาที่สอน:</label>
+            <div class="input-container">
+                <input type="text" name="subject" required>
+                <i class="fas fa-book"></i>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>รหัสผ่าน:</label>
+            <div class="input-container">
+                <input type="password" name="password" required>
+                <i class="fas fa-lock"></i>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>ยืนยันรหัสผ่าน:</label>
+            <div class="input-container">
+                <input type="password" name="password2" required>
+                <i class="fas fa-lock"></i>
+            </div>
+        </div>
+
+        <!-- ✅ Register Button -->
+        <button type="submit" class="btn-register">ลงทะเบียน</button>
+    </form>
+
+    <script>
+        document.getElementById('profilePicture').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profilePreview').src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</div>
+{% endblock %}

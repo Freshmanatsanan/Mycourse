@@ -1,39 +1,80 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    {% load static %}
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>บุคลากร</title>
-    <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
-    <link rel="stylesheet" href="{% static 'css/staff.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Mali:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <!-- Navbar -->
-    {% if request.user.is_authenticated %}
-        {% include 'navbar.html' %}
-    {% else %}
-        {% include 'navbar_guest.html' %}
-    {% endif %}
+{% extends 'admin/base_admin.html' %}
+{% load static %}
 
-    <!-- Main Content -->
-    <main class="staff-container">
-        <h1 class="page-title">บุคลากร</h1>
-        <div class="staff-grid">
-            {% for staff in staffs %}
-            <div class="staff-card">
-                <div class="staff-icon">
-                    <img src="{{ staff.image.url }}" alt="{{ staff.name }}">
-                </div>
-                <p>{{ staff.subject }} โดย {{ staff.name }}</p>
-            </div>
-            {% empty %}
-            <p style="text-align: center; color: red;">ไม่มีข้อมูลบุคลากร</p>
-            {% endfor %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin/sales.css' %}">
+{% endblock %}
+
+{% block title %}รายการการขาย{% endblock %}
+
+{% block content %}
+<body class="body-wrapper">
+    <div class="dashboard-container">
+        <h1 class="dashboard-title">รายการการขาย</h1>
+
+        <!-- ✅ ปุ่มแยก -->
+        <div class="sales-summary">
+            <a href="{% url 'sales' %}?type=booking" class="summary-box {% if active_tab == 'booking' %}active{% endif %}">
+                <h3>📚 คอร์สเรียนที่มีการจอง</h3>
+                <p>{{ booked_courses.count }} รายการ</p>
+            </a>
+            <a href="{% url 'sales' %}?type=video" class="summary-box {% if active_tab == 'video' %}active{% endif %}">
+                <h3>🎥 คอร์สวิดีโอที่มีการซื้อ</h3>
+                <p>{{ purchased_courses.count }} รายการ</p>
+            </a>
         </div>
 
-        </div>
-    </main>
+        {% if active_tab == 'booking' %}
+        <h2>📚 คอร์สเรียนที่มีการจอง</h2>
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>ชื่อคอร์ส</th>
+                    <th>จำนวนการจอง</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in booked_courses %}
+                <tr>
+                    <td>
+                        <a href="{% url 'booking_detail' course.id %}">{{ course.title }}</a>
+                    </td>
+                    <td>{{ course.booking_count }} รายการ</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" class="text-center">ไม่มีข้อมูล</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% if active_tab == 'video' %}
+        <h2>🎥 คอร์สวิดีโอที่มีการซื้อ</h2>
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>ชื่อคอร์ส</th>
+                    <th>จำนวนการซื้อ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in purchased_courses %}
+                <tr>
+                    <td>
+                        <a href="{% url 'video_order_detail' order.course_name %}">{{ order.course_name }}</a>
+                    </td>
+                    <td>{{ order.purchase_count }} รายการ</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" class="text-center">ไม่มีข้อมูล</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
 </body>
-</html>
+{% endblock %}

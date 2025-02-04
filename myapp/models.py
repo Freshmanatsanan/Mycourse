@@ -1,7 +1,8 @@
 from django.db import models
-from django.contrib.auth.models import User
-
-
+from django.contrib.auth.models import User, Group
+import hashlib
+from django.dispatch import receiver
+from django.db.models.signals import post_save
 
 class Course(models.Model):
     STATUS_CHOICES = [
@@ -18,6 +19,7 @@ class Course(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     revision_message = models.TextField(blank=True, null=True)  # เพิ่มฟิลด์นี้
     created_at = models.DateTimeField(auto_now_add=True) 
+    payment_qr = models.ImageField(upload_to='payment_qrs/', blank=True, null=True)
 
     def __str__(self):
         return self.title
@@ -75,33 +77,24 @@ class VideoCourseDetail(models.Model):
         return self.title
     
 
-
 class Banner(models.Model):
-    image = models.ImageField(upload_to='banners/', verbose_name="รูปภาพ")
-    is_active = models.BooleanField(default=True, verbose_name="แสดงผล")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Banner {self.id} - {'Active' if self.is_active else 'Inactive'}"
-    
-class BookingCourse(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'รอการตรวจสอบ'),
+        ('pending', 'รออนุมัติ'),
         ('approved', 'อนุมัติแล้ว'),
-        ('revision', 'ส่งกลับไปแก้ไข'),
+        ('rejected', 'ไม่อนุมัติ'),
     ]
 
-    name = models.CharField(max_length=255, verbose_name="ชื่อคอร์สเรียน")
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="ราคา")
-    instructor = models.CharField(max_length=255, verbose_name="ผู้สอน")
-    duration = models.CharField(max_length=50, verbose_name="ระยะเวลา")
-    image = models.ImageField(upload_to='booking_courses/', verbose_name="รูปปกคอร์ส")
-    payment_qr = models.ImageField(upload_to='payment_qrs/', blank=True, null=True, verbose_name="QR Code การชำระเงิน")
+    instructor = models.ForeignKey(User, on_delete=models.CASCADE,  verbose_name="ผู้สอน", null=True, blank=True)
+    image = models.ImageField(upload_to='banners/', verbose_name="รูปภาพ")
+    created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name="สถานะ")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="วันที่ส่งคอร์ส")
+    rejection_message = models.TextField(blank=True, null=True, verbose_name="เหตุผลการไม่อนุมัติ")
 
     def __str__(self):
-        return self.name
+        return f"Banner {self.id} - {self.get_status_display()} by {self.instructor.username}"
+    
+    
+
 
     
 
@@ -139,14 +132,129 @@ class CourseOrder(models.Model):
     def __str__(self):
         return f"{self.customer_name} - {self.course_name}"
     
-
 class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile" ,default=1)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     email = models.EmailField()
+    profile_picture = models.ImageField(upload_to="profile_pictures/", blank=True, null=True)  
     role = models.CharField(max_length=20, choices=[('member', 'Member'), ('teacher', 'Teacher')])
+
+    def get_profile_picture(self):
+        """✅ ใช้รูปที่อัปโหลด ถ้าไม่มีให้ใช้ค่าเริ่มต้น"""
+        if self.profile_picture:
+            return self.profile_picture.url
+        return "/static/images/PF.png" 
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(
+            user=instance, 
+            first_name=instance.first_name, 
+            last_name=instance.last_name, 
+            email=instance.email
+        )
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()
+
+
+    
+
+class InstructorProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="instructor_profile")
+    profile_picture = models.ImageField(upload_to="instructors/profile_pictures/", blank=True, null=True)
+    phone = models.CharField(max_length=20)
+    age = models.PositiveIntegerField()
+    subject = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # ตรวจสอบว่าผู้ใช้ยังไม่มีอยู่ในกลุ่ม Instructor
+        instructor_group, created = Group.objects.get_or_create(name="Instructor")
+        if not self.user.groups.filter(name="Instructor").exists():
+            self.user.groups.add(instructor_group)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.first_name} {self.user.last_name} - {self.subject}"
+    
+
+class CourseBooking(models.Model):
+    # ✅ ข้อมูลนักเรียน
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    student_name = models.CharField(max_length=255)  # ชื่อจริง-นามสกุล (ภาษาไทย)
+    student_name_en = models.CharField(max_length=255)  # ชื่อจริง-นามสกุล (ภาษาอังกฤษ)
+    nickname_th = models.CharField(max_length=50)  # ชื่อเล่น (ไทย)
+    nickname_en = models.CharField(max_length=50)  # ชื่อเล่น (อังกฤษ)
+    age = models.IntegerField()
+    grade = models.CharField(
+        max_length=30,
+        choices=[
+            ("อนุบาล 2", "อนุบาล 2"),
+            ("อนุบาล 3", "อนุบาล 3"),
+            ("ประถมศึกษาปีที่ 1", "ประถมศึกษาปีที่ 1"),
+            ("ประถมศึกษาปีที่ 2", "ประถมศึกษาปีที่ 2"),
+            ("ประถมศึกษาปีที่ 3", "ประถมศึกษาปีที่ 3"),
+            ("ประถมศึกษาปีที่ 4", "ประถมศึกษาปีที่ 4"),
+            ("ประถมศึกษาปีที่ 5", "ประถมศึกษาปีที่ 5"),
+            ("ประถมศึกษาปีที่ 6", "ประถมศึกษาปีที่ 6"),
+            ("อื่นๆ", "อื่นๆ"),
+        ]
+    )
+    other_grade = models.CharField(max_length=255, blank=True, null=True)
+
+    # ✅ ข้อมูลผู้ปกครอง
+    parent_nickname = models.CharField(max_length=50)  # ชื่อเล่นผู้ปกครอง
+    phone = models.CharField(max_length=15)
+    line_id = models.CharField(max_length=100, blank=True, null=True)  # ไอดีไลน์
+
+    # ✅ รายละเอียดคอร์ส
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)  # ✅ เปลี่ยนเป็น ForeignKey
+
+    selected_course = models.CharField(
+        max_length=50,
+        choices=[
+            ("K1", "K1 = 9:00 - 10:00"),
+            ("K2-3", "K2-3 = 10:30 - 11:30"),
+            ("P1-3", "P1-3 = 10:30 - 11:30"),
+            ("P4-6", "P4-6 = 10:30 - 11:30"),
+        ],
+        default="K1"
+    )
+
+
+    # ✅ การชำระเงิน
+    payment_slip = models.ImageField(upload_to='payment_slips/', blank=True, null=True)
+    payment_status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "รอการตรวจสอบ"),
+            ("approved", "ชำระแล้ว"),
+            ("rejected", "ปฏิเสธ"),
+        ],
+        default="pending"
+    )
+
+    # ✅ สถานะการจอง
+    booking_status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", "รอการยืนยัน"),
+            ("confirmed", "ยืนยันแล้ว"),
+            ("canceled", "ยกเลิก"),
+        ],
+        default="pending"
+    )
+
+    booking_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student_name} - {self.course}"
     
 

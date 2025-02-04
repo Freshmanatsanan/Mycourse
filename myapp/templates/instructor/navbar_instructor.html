@@ -9,7 +9,7 @@
 
     <!-- Navigation Links -->
     <ul class="nav-links">
-        <li class="{% if request.resolver_match.url_name == 'instructor_sales' %}active{% endif %}">
+        <li class="{% if request.resolver_match.url_name == 'instructor_sales' or request.resolver_match.url_name == 'booking_detail' %}active{% endif %}">
             <a href="{% url 'instructor_sales' %}">การขาย</a>
         </li>
         <li class="{% if request.resolver_match.url_name == 'reservation_courses' or request.resolver_match.url_name == 'add_course'  or request.resolver_match.url_name == 'add_course_details' %}active{% endif %}">

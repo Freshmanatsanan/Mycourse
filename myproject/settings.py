@@ -179,3 +179,6 @@ PASSWORD_HASHERS = [
 CSRF_TRUSTED_ORIGINS = [
     'https://mycourse-production.up.railway.app',
 ]
+
+
+

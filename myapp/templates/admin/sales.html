@@ -1,7 +1,9 @@
 {% extends 'admin/base_admin.html' %}
 {% load static %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/admin/sales.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 {% endblock %}
 
 {% block title %}รายการการขาย{% endblock %}
@@ -9,48 +11,86 @@
 {% block content %}
 <body class="body-wrapper">
     <div class="dashboard-container">
-        <h1 class="dashboard-title">รายการการจองคอร์สเรียน</h1>
+        <h1 class="dashboard-title">รายการ<span style="color: orange;">คอร์ส</span> <span style="color: #0080ff;">เรียน</span></h1>
+
+        <!-- ✅ กล่องแสดงจำนวนคอร์ส -->
         <div class="sales-summary">
-            <a href="{#}" class="summary-box {% if active_tab == 'video' %}active{% endif %}">
-                <h3>ออเดอร์ซื้อคอร์สวิดีโอ</h3>
-                <p>{{ video_orders_count }} รายการ</p>
+            <a href="{% url 'sales' %}?type=booking" class="summary-box booking-box {% if active_tab == 'booking' %}active{% endif %}">
+                <div class="icon"><i class="fas fa-chalkboard-teacher"></i></div>
+                <h2>{{ booked_courses.count }}</h2>
+                <p>คอร์สเรียนที่มีการจอง</p>
             </a>
-            <a href="{#}" class="summary-box {% if active_tab == 'booking' %}active{% endif %}">
-                <h3>ออเดอร์การจองคอร์ส</h3>
-                <p>{{ booking_orders_count }} รายการ</p>
+            <a href="{% url 'sales' %}?type=video" class="summary-box video-box {% if active_tab == 'video' %}active{% endif %}">
+                <div class="icon"><i class="fas fa-video"></i></div>
+                <h2>{{ purchased_courses.count }}</h2>
+                <p>คอร์สวิดีโอที่มีการซื้อ</p>
             </a>
         </div>
+
+        {% if active_tab == 'booking' %}
+        <h2>รายการคอร์สเรียนที่มีการจอง</h2>
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>รูปคอร์ส</th>
+                    <th>ชื่อคอร์ส</th>
+                    <th>จำนวนการจอง</th>
+                    <th>ดูรายละเอียด</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in booked_courses %}
+                <tr>
+
+
+
+                    
+                    <td><img src="{{ course.image.url }}" alt="{{ course.name }}" class="course-image"></td>
+                    <td><a href="{% url 'booking_detail' course.id %}" class="course-link">{{ course.title }}</a></td>
+
+                    <td>{{ course.booking_count }}</td>
+                    <td>
+                        <a href="{% url 'booking_detail' course.id %}" class="btn-view">
+                            <i class="fas fa-eye"></i> ดู
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">ไม่มีข้อมูล</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% if active_tab == 'video' %}
+        <h2>🎥 รายการคอร์สวิดีโอที่มีการซื้อ</h2>
         <table class="order-table">
             <thead>
                 <tr>
                     <th>ชื่อคอร์ส</th>
-                    <th>ชื่อลูกค้า</th>
-                    <th>สลิปการโอน</th>
-                    <th>อีเมลลูกค้า</th>
-                    <th>สถานะ</th>
-                    <th>เวลาการจอง</th>
+                    <th>จำนวนการซื้อ</th>
+                    <th>ดูรายละเอียด</th>
                 </tr>
             </thead>
             <tbody>
-                
+                {% for order in purchased_courses %}
                 <tr>
-                    <td>{{ order.course_name }}</td>
-                    <td>{{ order.customer_name }}</td>
                     <td>
-                        
-                        <img src="{{ order.transfer_slip.url }}" alt="สลิป" class="slip-image">
-                    
-                    <td>{{ order.email }}</td>
-                    <td>{{ order.status }}</td>
-                    <td>{{ order.order_date }}</td>
+                        <a href="{% url 'video_order_detail' order.course_name %}" class="course-link">{{ order.course_name }}</a>
+                    </td>
+                    <td>{{ order.purchase_count }}</td>
+                    <td><a href="{% url 'video_order_detail' order.course_name %}" class="btn-view"><i class="fas fa-eye"></i> ดู</a></td>
                 </tr>
-                
+                {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center">ไม่มีข้อมูลการจอง</td>
+                    <td colspan="3" class="text-center">ไม่มีข้อมูล</td>
                 </tr>
-                
+                {% endfor %}
             </tbody>
         </table>
+        {% endif %}
     </div>
 </body>
 {% endblock %}

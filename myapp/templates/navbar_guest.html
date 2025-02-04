@@ -1,6 +1,7 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/navbar_guest.css' %}">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Mali:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <nav class="navbar">        
     <div class="container">
 
@@ -20,11 +21,15 @@
             <li><a href="{% url 'all_courses' %}" class="{% if request.resolver_match.url_name == 'all_courses' %}active-blue{% endif %}">คอร์สเรียนทั้งหมด</a></li>
         
             <!-- ครูของเรา: สีส้ม -->
-            <li><a href="{% url 'staff_list' %}" class="{% if request.resolver_match.url_name == 'staff_list' %}active-orange{% endif %}">บุคลากร</a></li>
+            <li><a href="{% url 'instructor_list' %}" class="{% if request.resolver_match.url_name == 'instructor_list' %}active-orange{% endif %}">บุคลากร</a></li>
         
             <!-- ติดต่อเรา: สีฟ้า -->
             <li><a href="{% url 'contact' %}" class="{% if request.resolver_match.url_name == 'contact' %}active-blue{% endif %}">ติดต่อเรา</a></li>
         </ul>
+        <form action="{% url 'all_courses' %}" method="GET" class="search-form">
+            <input type="text" name="q" placeholder="ค้นหาคอร์ส..." value="{{ request.GET.q }}">
+            <button type="submit"><i class="fas fa-search"></i></button>
+        </form>
 
         <!-- Auth Links -->
         <div class="auth-links">

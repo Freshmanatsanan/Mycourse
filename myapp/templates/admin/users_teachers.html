@@ -19,7 +19,7 @@
             <table class="user-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        
                         <th>ชื่อ</th>
                         <th>นามสกุล</th>
                         <th>อีเมล</th>
@@ -29,7 +29,7 @@
                     {% if members %}
                         {% for member in members %}
                             <tr>
-                                <td>{{ member.id }}</td>
+                                
                                 <td>{{ member.first_name }}</td>
                                 <td>{{ member.last_name }}</td>
                                 <td>{{ member.email }}</td>
@@ -45,34 +45,42 @@
         </div>
         <div id="teachersList" class="user-list hidden">
             <h2 class="list-title">รายชื่อผู้สอน</h2>
-
+            <div class="register-teacher">
+                <a href="{% url 'register_instructor' %}" class="btn-register-teacher">ลงทะเบียนผู้สอน</a> 
+            </div>
+        
             <table class="user-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>รูปผู้สอน</th>
                         <th>ชื่อ</th>
                         <th>นามสกุล</th>
                         <th>อีเมล</th>
-                        <th>ข้อมูลเพิ่มเติม</th>
-                        
+                        <th>วิชาที่สอน</th>
+                        <th>เบอร์โทร</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% if instructors %}
                         {% for instructor in instructors %}
                             <tr>
-                                <td>{{ instructor.id }}</td>
-                                <td>{{ instructor.first_name }}</td>
-                                <td>{{ instructor.last_name }}</td>
-                                <td>{{ instructor.email }}</td>
                                 <td>
-                                    <a href="{% url 'add_staff' instructor.id %}" class="btn-add-profile">เพิ่มโปรไฟล์</a>
+                                    {% if instructor.profile_picture %}
+                                        <img src="{{ instructor.profile_picture.url }}" alt="รูปภาพผู้สอน" style="width: 50px; height: 50px; border-radius: 50%;">
+                                    {% else %}
+                                        <span style="color: gray;">ไม่มีรูป</span>
+                                    {% endif %}
                                 </td>
+                                <td>{{ instructor.user.first_name }}</td>
+                                <td>{{ instructor.user.last_name }}</td>
+                                <td>{{ instructor.user.email }}</td>
+                                <td>{{ instructor.subject }}</td>
+                                <td>{{ instructor.phone }}</td>
                             </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="4" style="text-align: center; color: red;">ไม่มีข้อมูลผู้สอน</td>
+                            <td colspan="5" style="text-align: center; color: red;">ไม่มีข้อมูลผู้สอน</td>
                         </tr>
                     {% endif %}
                 </tbody>

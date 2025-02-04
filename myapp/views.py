@@ -7,7 +7,6 @@ from .models import CourseDetails
 from django.http import HttpResponse
 from .models import Banner
 from .models import Staff
-from .models import BookingCourse
 from .models import CourseOrder
 from .models import VideoLesson  
 from .models import UserProfile 
@@ -28,6 +27,15 @@ from django.contrib.auth.models import User, Group  # นำเข้า Group
 from rest_framework.permissions import AllowAny
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
+from .models import InstructorProfile
+from django.db.models import Q
+from django.http import JsonResponse
+import json
+from django.core.files.storage import FileSystemStorage
+from .models import CourseBooking
+from django.db.models import Count
+from django.core.paginator import Paginator
+
 def register(request):
     if request.method == 'POST':
         username = request.POST['username']
@@ -71,17 +79,27 @@ def register(request):
     return render(request, 'register.html')
 
 
+
 def login_view(request):
     if request.method == 'POST':
-        email = request.POST['email']
-        password = request.POST['password']
+        email = request.POST.get('email')
+        password = request.POST.get('password')
 
         try:
             user = User.objects.get(email=email)
             user = authenticate(request, username=user.username, password=password)
+
             if user:
+                # ✅ ตรวจสอบว่าผู้ใช้มีโปรไฟล์หรือไม่ ถ้าไม่มีให้สร้างใหม่
+                profile, created = UserProfile.objects.get_or_create(user=user, defaults={
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "email": user.email,
+                })
+
                 login(request, user)
 
+                # ✅ ตรวจสอบว่าอยู่ในกลุ่มไหน และเปลี่ยนเส้นทางให้เหมาะสม
                 if user.groups.filter(name='Instructor').exists():
                     return redirect('instructor_sales')
                 elif user.groups.filter(name='Admin').exists():
@@ -259,14 +277,58 @@ def banners_api(request):
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-def user_list(request):
-    members = UserProfile.objects.filter(role='member')
-    teachers = UserProfile.objects.filter(role='teacher')
-    return render(request, 'admin/users_teachers.html', {'members': members, 'teachers': teachers})
 
 def sales(request):
-    orders = CourseOrder.objects.all()
-    return render(request, 'admin/sales.html', {'orders': orders})
+    active_tab = request.GET.get("type", "booking")
+
+    # ✅ คอร์สที่มีการจอง (ดึงจาก Course ที่มี CourseBooking)
+    booked_courses = Course.objects.filter(
+        id__in=CourseBooking.objects.values("course_id")
+    ).annotate(booking_count=Count("coursebooking"))
+
+    # ✅ หา CourseDetails ที่เกี่ยวข้อง (เพื่อดึงรายละเอียดเพิ่มเติม)
+    course_details_dict = {cd.course_id: cd for cd in CourseDetails.objects.filter(course__in=booked_courses)}
+
+    # ✅ คอร์สวิดีโอที่มีการซื้อ
+    purchased_courses = CourseOrder.objects.values("course_name").annotate(purchase_count=Count("id"))
+
+    return render(request, "admin/sales.html", {
+        "booked_courses": booked_courses,
+        "course_details_dict": course_details_dict,  # ✅ ส่งข้อมูล CourseDetails ไปให้ Template
+        "purchased_courses": purchased_courses,
+        "active_tab": active_tab,
+    })
+
+
+def booking_detail(request, course_id):
+    # ✅ ดึง Course จาก `course_id`
+    course = get_object_or_404(Course, id=course_id)
+
+    search_query = request.GET.get("search", "")
+
+    # ✅ ดึงข้อมูลการจองจาก `CourseBooking`
+    bookings = CourseBooking.objects.filter(course=course).order_by("-booking_date")
+
+    if search_query:
+        bookings = bookings.filter(student_name__icontains=search_query)
+
+    paginator = Paginator(bookings, 10)
+    page_number = request.GET.get("page")
+    bookings_page = paginator.get_page(page_number)
+
+    return render(request, "admin/booking_detail.html", {
+        "course": course,
+        "bookings": bookings_page,
+    })
+
+
+def video_order_detail(request, order_id):
+    orders = CourseOrder.objects.filter(course_name=order_id)
+
+    return render(request, "admin/video_order_detail.html", {
+        "course": orders.first(),
+        "orders": orders,
+    })
 
 def review_video_courses(request):
     courses = VideoLesson.objects.filter(status='pending')  # ใช้ VideoLesson
@@ -284,18 +346,17 @@ def send_back_video_course(request, course_id):
     course.save()
     return redirect('review_video_courses')
 
-
 def upload_payment_qr(request, course_id):
-    if request.method == 'POST':
-        course = get_object_or_404(BookingCourse, id=course_id)
-        payment_qr = request.FILES.get('payment_qr')
-        if payment_qr:
-            course.payment_qr = payment_qr
-            course.save()
-            return redirect('review_booking_courses')
-        else:
-            return HttpResponse("กรุณาอัปโหลดไฟล์รูปภาพ QR Code")
-    return HttpResponse("ไม่อนุญาตให้เข้าถึง")
+    course = get_object_or_404(Course, id=course_id)
+
+    if request.method == "POST" and 'payment_qr' in request.FILES:
+        course.payment_qr = request.FILES['payment_qr']
+        course.save()
+        messages.success(request, "✅ อัปโหลด QR Code สำเร็จแล้ว!")
+        return redirect('review_booking_courses')
+
+    messages.error(request, "⚠️ กรุณาอัปโหลดไฟล์ QR Code")
+    return redirect('review_booking_courses')
 
 def review_booking_courses(request):
     # ดึงเฉพาะคอร์สที่มีสถานะ 'pending' หรือ 'revised'
@@ -325,6 +386,11 @@ def delete_selected_courses(request):
 
 def approve_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
+
+    if not course.payment_qr:
+        messages.error(request, "❌ กรุณาอัปโหลด QR Code ก่อนอนุมัติ")
+        return redirect('review_booking_courses')
+
     course.status = 'approved'  # เปลี่ยนสถานะเป็นอนุมัติ
     course.save()
     messages.success(request, 'อนุมัติคอร์สเรียนเรียบร้อยแล้ว!')
@@ -357,22 +423,61 @@ def admin_dashboard(request):
 
 
 @login_required
-@instructor_required
 def add_banner(request):
     if request.method == 'POST':
         image = request.FILES.get('banner_image')
+
         if image:
-            Banner.objects.create(image=image)
-            messages.success(request, "เพิ่มสไลด์เบนเนอร์สำเร็จ!")
+            Banner.objects.create(
+                instructor=request.user,  # ✅ ระบุว่าใครเป็นคนเพิ่ม
+                image=image,
+                status='pending'  # ✅ ตั้งค่ารออนุมัติ
+            )
+            messages.success(request, "✅ เพิ่มเบนเนอร์สำเร็จ! โปรดรอการอนุมัติจากแอดมิน")
             return redirect('banners')
         else:
-            messages.error(request, "กรุณาเลือกไฟล์รูปภาพ")
+            messages.error(request, "⚠ กรุณาเลือกไฟล์รูปภาพ")
+    
     return render(request, 'instructor/add_banner.html')
 
+@login_required
 def banners(request):
-    # ดึงข้อมูลเบนเนอร์ทั้งหมดจากฐานข้อมูล
-    banners = Banner.objects.all()
+    banners = Banner.objects.filter(instructor=request.user)  # ✅ แสดงเฉพาะของผู้สอนคนนั้น
     return render(request, 'instructor/banners.html', {'banners': banners})
+
+@login_required
+@admin_required
+def banners_admin(request):
+    banners = Banner.objects.filter(status='pending')  # ✅ ดึงเฉพาะที่รออนุมัติ
+    return render(request, 'admin/banners_admin.html', {'banners': banners})
+
+@login_required
+@admin_required
+def approve_banner(request, banner_id):
+    banner = get_object_or_404(Banner, id=banner_id)
+    banner.status = 'approved'
+    banner.rejection_message = ""  # ✅ เคลียร์ข้อความปฏิเสธ
+    banner.save()
+    messages.success(request, "อนุมัติโฆษณาสำเร็จ!")
+    return redirect('banners_admin')
+
+@login_required
+@admin_required
+def reject_banner(request, banner_id):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            rejection_message = data.get('rejection_message', '')
+
+            banner = get_object_or_404(Banner, id=banner_id)
+            banner.status = 'rejected'
+            banner.rejection_message = rejection_message
+            banner.save()
+
+            return JsonResponse({"success": True})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
 
 def delete_banner(request, banner_id):
     banner = get_object_or_404(Banner, id=banner_id)
@@ -554,30 +659,25 @@ def reservation_courses(request):
     return render(request, 'instructor/reservation_courses.html', {'courses': courses})
 
 
-@instructor_required
-def instructor_sales(request):
-    return render(request, 'instructor/sales.html')
+
 
 def contact(request):
     return render(request, 'contact.html')
 
-def staff_list(request):
-    staffs = Staff.objects.all()  # ดึงข้อมูลบุคลากรทั้งหมด
-    return render(request, 'staff.html', {'staffs': staffs}) 
 
 def user_list(request):
-    """ ดึงรายชื่อสมาชิกและผู้สอนจาก Django Group """
-    try:
-        instructor_group = Group.objects.get(name="Instructor")
-        instructors = User.objects.filter(groups=instructor_group).order_by("first_name")
-    except Group.DoesNotExist:
-        instructors = []
+    members = User.objects.filter(instructor_profile__isnull=True)  # สมาชิกทั่วไป
+    instructors = InstructorProfile.objects.select_related('user').all()  # ผู้สอน
 
-    try:
-        member_group = Group.objects.get(name="Member")
-        members = User.objects.filter(groups=member_group).order_by("first_name")
-    except Group.DoesNotExist:
-        members = []
+    # ✅ Debugging เพื่อตรวจสอบข้อมูลก่อนส่งไปยังเทมเพลต
+    print(f"📌 สมาชิกทั้งหมด: {members.count()} | ผู้สอนทั้งหมด: {instructors.count()}")
+    for instructor in instructors:
+        print(f"👨‍🏫 {instructor.user.first_name} {instructor.user.last_name} | {instructor.subject} | {instructor.phone}")
+
+    return render(request, 'admin/users_teachers.html', {
+        'members': members,
+        'instructors': instructors
+    })
 
     return render(request, "admin/users_teachers.html", {
         "instructors": instructors,
@@ -610,7 +710,7 @@ def add_staff(request, user_id):  # รับ user_id เป็นพารา�
 
 
 def home(request):
-    banners = Banner.objects.filter(is_active=True)
+    banners = Banner.objects.filter(status="approved") 
     approved_courses = Course.objects.filter(status='approved')
     
     if request.user.is_authenticated:
@@ -628,21 +728,26 @@ def home(request):
 
 
 def all_courses(request):
-    # ดึงเฉพาะคอร์สที่มีสถานะเป็น 'approved'
+    # ค้นหาคอร์สที่มีสถานะ 'approved'
+    query = request.GET.get('q', '')  # รับค่าค้นหาจากช่องค้นหา
     approved_courses = Course.objects.filter(status='approved')
 
-    # ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
-    if request.user.is_authenticated:
-        # หากเข้าสู่ระบบแล้ว แสดงหน้า `all_courses.html`
-        return render(request, 'all_courses.html', {'courses': approved_courses})
-    else:
-        # หากยังไม่ได้เข้าสู่ระบบ แสดงหน้า `guest_all_courses.html`
-        return render(request, 'guest_all_courses.html', {'courses': approved_courses})
+    # ✅ ถ้ามีการค้นหา ให้กรองผลลัพธ์
+    if query:
+        approved_courses = approved_courses.filter(
+            Q(title__icontains=query) |  # ค้นหาชื่อคอร์ส
+            Q(description__icontains=query)  # ค้นหาจากรายละเอียดคอร์ส
+        )
+
+    # ✅ ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
+    template_name = 'all_courses.html' if request.user.is_authenticated else 'guest_all_courses.html'
+
+    return render(request, template_name, {'courses': approved_courses, 'query': query})
 
 
 @login_required
 def profile_view(request):
-    return render(request, 'profile.html', {'user': request.user})
+    return render(request, 'profile.html', {'user': request.user, 'profile': request.user.profile})
 
 @login_required
 def logout_view(request):
@@ -667,13 +772,23 @@ def admin_logout(request):
 def update_profile(request):
     if request.method == 'POST':
         user = request.user
-        user.username = request.POST['username']
-        user.first_name = request.POST['first_name']
-        user.last_name = request.POST['last_name']
-        user.email = request.POST['email']
+        profile = user.profile
+
+        user.username = request.POST.get('username', user.username)
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.email = request.POST.get('email', user.email)
         user.save()
+
+        if 'profile_picture' in request.FILES:
+            profile.profile_picture = request.FILES['profile_picture']
+            profile.save()  # ✅ บันทึกการเปลี่ยนแปลง
+            
+        messages.success(request, "บันทึกข้อมูลเรียบร้อยแล้ว!")
         return redirect('profile')
-    return render(request, 'edit_profile.html')
+    
+    return render(request, 'edit_profile.html', {'user': request.user, 'profile': request.user.profile})
+
 
 def check_password(request):
     return render(request, 'check_password.html')
@@ -697,3 +812,243 @@ def change_password(request):
             login(request, request.user)  # Log the user back in
             return redirect('profile')
     return render(request, 'change_password.html')
+
+
+def register_instructor(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        first_name = request.POST.get("first_name")
+        last_name = request.POST.get("last_name")
+        email = request.POST.get("email")
+        phone = request.POST.get("phone")
+        age = request.POST.get("age")
+        subject = request.POST.get("subject")
+        password = request.POST.get("password")
+        password2 = request.POST.get("password2")
+        profile_picture = request.FILES.get("profile_picture")
+
+        # ✅ ตรวจสอบรหัสผ่านตรงกันหรือไม่
+        if password != password2:
+            messages.error(request, "รหัสผ่านไม่ตรงกัน")
+            return redirect("register_instructor")
+
+        # ✅ ตรวจสอบว่ามีชื่อผู้ใช้และอีเมลซ้ำหรือไม่
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "ชื่อผู้ใช้นี้มีอยู่แล้ว")
+            return redirect("register_instructor")
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "อีเมลนี้ถูกใช้ไปแล้ว")
+            return redirect("register_instructor")
+
+        # ✅ สร้าง User
+        user = User.objects.create(
+            username=username,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password=make_password(password),
+        )
+
+        # ✅ ตรวจสอบว่ากลุ่ม "Instructor" มีอยู่หรือไม่ ถ้าไม่มีให้สร้าง
+        instructor_group, created = Group.objects.get_or_create(name="Instructor")
+        user.groups.add(instructor_group)  # เพิ่มผู้ใช้เข้าในกลุ่ม Instructor
+
+        # ✅ สร้าง InstructorProfile
+        instructor_profile = InstructorProfile(
+            user=user,
+            profile_picture=profile_picture,
+            phone=phone,
+            age=age,
+            subject=subject,
+        )
+        instructor_profile.save()  # บันทึกข้อมูล
+
+        messages.success(request, "ลงทะเบียนผู้สอนสำเร็จ")
+        return redirect("user_list")
+
+    return render(request, "admin/register_instructor.html")
+
+
+def instructor_list(request):
+    instructors = InstructorProfile.objects.select_related('user').all()
+    return render(request, 'staff.html', {'instructors': instructors})
+
+
+def course_details_admin(request, course_id):
+    # ดึงข้อมูลคอร์สที่มี id ตรงกับ course_id
+    course = get_object_or_404(CourseDetails, course_id=course_id)
+    add_course = course.course  # สมมติว่า CourseDetails มี ForeignKey กับ add_course
+
+    # ส่งข้อมูลคอร์สไปที่ Template
+    return render(request, 'admin/course_details_admin.html', {'course': course, 'add_course': add_course})
+
+
+
+def booking_course(request, course_id):
+    course = get_object_or_404(CourseDetails, course_id=course_id) 
+    return render(request, 'booking_course.html', {'course': course})
+
+@login_required
+def submit_booking(request, course_details_id):
+    course_details = get_object_or_404(CourseDetails, id=course_details_id)
+    course_selected = course_details.course
+
+    if request.method == "POST":
+        selected_course = request.POST.get("selected_course", "").strip()
+
+        if not selected_course:
+            messages.error(request, "❌ กรุณาเลือกคอร์สก่อนดำเนินการต่อ")
+            return redirect("booking_course", course_id=course_details_id)
+
+        # ✅ ดึงข้อมูลจากฟอร์ม
+        student_name = request.POST['student_name']
+        student_name_en = request.POST['student_name_en']
+        nickname_th = request.POST['nickname_th']
+        nickname_en = request.POST['nickname_en']
+        age = request.POST['age']
+        grade = request.POST['grade']
+        other_grade = request.POST.get('other_grade', '')
+        parent_nickname = request.POST['parent_nickname']
+        phone = request.POST['phone']
+        line_id = request.POST.get('line_id', '')
+
+        if grade == "อื่นๆ":
+            grade = other_grade
+
+        # ✅ บันทึกข้อมูลลง `CourseBooking` และกำหนด `user=request.user`
+        booking = CourseBooking.objects.create(
+            user=request.user,  # ✅ บันทึก user ที่จองคอร์ส
+            student_name=student_name,
+            student_name_en=student_name_en,
+            nickname_th=nickname_th,
+            nickname_en=nickname_en,
+            age=age,
+            grade=grade,
+            other_grade=other_grade,
+            parent_nickname=parent_nickname,
+            phone=phone,
+            line_id=line_id,
+            course=course_selected,
+            selected_course=selected_course,
+            booking_status="pending",
+            payment_status="pending"
+        )
+
+        return redirect("payment_page", booking_id=booking.id)
+
+    return render(request, "booking_course.html", {"course": course_details})
+
+
+
+
+def payment_page(request, booking_id):
+    booking = get_object_or_404(CourseBooking, id=booking_id)  # ✅ ดึงข้อมูลการจอง
+    course_details = get_object_or_404(CourseDetails, course=booking.course)
+
+    #course_details = get_object_or_404(CourseDetails, id=booking.course.id)  # ✅ ดึง CourseDetails
+    course = course_details.course  # ✅ ดึง Course ที่แท้จริง
+    qr_code_url = course.payment_qr.url if course.payment_qr else None  # ✅ ดึง QR Code จาก Course
+
+    return render(request, "payment_page.html", {
+        "booking": booking,
+        "course": course,  # ✅ ใช้ข้อมูล Course ที่ถูกต้อง
+        "qr_code_url": qr_code_url
+    })
+
+
+
+    
+def submit_payment(request, booking_id):
+    booking = get_object_or_404(CourseBooking, id=booking_id)
+
+    if request.method == "POST" and "payment_slip" in request.FILES:
+        payment_slip = request.FILES["payment_slip"]
+
+        # ✅ บันทึกสลิป
+        fs = FileSystemStorage()
+        filename = fs.save(payment_slip.name, payment_slip)
+        booking.payment_slip = filename
+        booking.payment_status = "pending"
+        booking.save()
+
+        messages.success(request, "✅ อัปโหลดสลิปสำเร็จ! กรุณารอการตรวจสอบ")
+        return redirect("home")  # ✅ พากลับไปหน้าหลัก
+
+    messages.error(request, "⚠ กรุณาอัปโหลดไฟล์สลิป")
+    return redirect("payment_page", booking_id=booking.id)
+
+def success_page(request):
+    return render(request, "success.html")
+
+
+@login_required
+def instructor_sales(request):
+
+    user = request.user  # ✅ ดึงผู้ใช้ที่เข้าสู่ระบบ
+    active_tab = request.GET.get("type", "booking")
+
+    # ✅ คอร์สที่มีการจอง (ดึงจาก Course ที่มี CourseBooking)
+    booked_courses = Course.objects.filter(
+        id__in=CourseBooking.objects.values("course_id")
+    ).annotate(booking_count=Count("coursebooking"))
+
+    # ✅ หา CourseDetails ที่เกี่ยวข้อง (เพื่อดึงรายละเอียดเพิ่มเติม)
+    course_details_dict = {cd.course_id: cd for cd in CourseDetails.objects.filter(course__in=booked_courses)}
+
+    # ✅ คอร์สวิดีโอที่มีการซื้อ
+    purchased_courses = CourseOrder.objects.values("course_name").annotate(purchase_count=Count("id"))
+
+    return render(request, "instructor/sales.html", {
+        "booked_courses": booked_courses,
+        "course_details_dict": course_details_dict,  # ✅ ส่งข้อมูล CourseDetails ไปให้ Template
+        "purchased_courses": purchased_courses,
+        "active_tab": active_tab,
+
+    })
+
+
+@login_required
+def instructor_booking_detail(request, course_id):
+
+        # ✅ ดึง Course จาก `course_id`
+    course = get_object_or_404(Course, id=course_id)
+
+    search_query = request.GET.get("search", "")
+
+    # ✅ ดึงข้อมูลการจองจาก `CourseBooking`
+    bookings = CourseBooking.objects.select_related("user").filter(course=course).order_by("-booking_date")
+
+
+    if search_query:
+        bookings = bookings.filter(student_name__icontains=search_query)
+
+    paginator = Paginator(bookings, 10)
+    page_number = request.GET.get("page")
+    bookings_page = paginator.get_page(page_number)
+
+    return render(request, "instructor/booking_detail.html", {
+        "course": course,
+        "bookings": bookings_page,
+    })
+
+
+@login_required
+def instructor_video_order_detail(request,  order_id):
+
+    orders = CourseOrder.objects.filter(course_name=order_id)
+
+    return render(request, "instructor/video_order_detail.html", {
+        "course": orders.first(),
+        "orders": orders,
+    })
+
+
+
+@login_required
+def user_booking_history(request):
+    # ✅ ดึงประวัติการจองของผู้ใช้ที่ล็อกอินอยู่
+    bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
+
+    return render(request, "booking_history.html", {
+        "bookings": bookings
+    })

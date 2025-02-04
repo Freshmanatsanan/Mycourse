@@ -32,20 +32,45 @@ body {
 }
 
 .profile-img-container {
-    width: 120px;
-    height: 120px;
+    width: 150px;
+    height: 150px;
     margin: 0 auto 20px auto; /* จัดให้อยู่ตรงกลางและเพิ่มระยะห่างล่าง */
     border-radius: 50%;
-    background-color: #F3F3F3;
+    overflow: hidden; /* ป้องกันภาพล้นออกจากกรอบ */
     display: flex;
     justify-content: center;
     align-items: center;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    background-color: #fff; /* พื้นหลังวงกลม */
+
+    /* ✅ ใช้ `position: relative;` เพื่อรองรับการสร้างขอบ */
+    position: relative;
+    padding: 3px; /* เพิ่มระยะห่างขอบ */
+
+    /* ✅ เพิ่มเส้นขอบไล่สี */
+    background: linear-gradient(135deg, #613E74, #FF6B6B, #FFD93D);
 }
 
+/* ✅ สร้างเลเยอร์ขอบแบบไล่สี */
+.profile-img-container::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    z-index: -1;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #613E74, #FF6B6B, #FFD93D); /* ไล่สี */
+}
+
+/* ✅ ปรับขนาดภาพโปรไฟล์ */
 .profile-img {
-    width: 80px;
-    height: 80px;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* ป้องกันภาพผิดสัดส่วน */
+    border-radius: 50%;
+    background-color: white; /* เผื่อภาพมีช่องว่าง */
 }
 
 h1 {

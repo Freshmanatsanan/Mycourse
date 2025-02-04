@@ -1,0 +1,49 @@
+{% extends 'admin/base_admin.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin/sales.css' %}">
+{% endblock %}
+
+{% block title %}รายละเอียดการซื้อคอร์สวิดีโอ{% endblock %}
+
+{% block content %}
+<body class="body-wrapper">
+    <div class="dashboard-container">
+        <h1 class="dashboard-title">รายละเอียดการซื้อ - {{ course.course_name }}</h1>
+
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>ชื่อลูกค้า</th>
+                    <th>อีเมล</th>
+                    <th>สลิปการโอน</th>
+                    <th>สถานะ</th>
+                    <th>เวลาการซื้อ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.customer_name }}</td>
+                    <td>{{ order.email }}</td>
+                    <td>
+                        {% if order.transfer_slip %}
+                            <img src="{{ order.transfer_slip.url }}" alt="สลิป" class="slip-image">
+                        {% else %}
+                            <span class="text-muted">ไม่มีสลิป</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ order.status }}</td>
+                    <td>{{ order.order_date }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">ไม่มีข้อมูลการซื้อ</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+{% endblock %}

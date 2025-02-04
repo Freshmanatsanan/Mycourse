@@ -106,12 +106,16 @@
         <hr class="section-divider">
         <div class="course-list">
             {% for course in courses %}
-            <!-- คอร์สออนไซต์ -->
             <div class="course-item">
-                <img src="{{ course.image.url }}" alt="{{ course.title }}">
-                <h3>{{ course.title }}</h3>
-                <td>{{ course.instructor }}</td>
-                <p>{{ course.price }} บาท</p>
+                <!-- ✅ คลิกที่ card เพื่อไปหน้า course_details -->
+                <a href="{% url 'course_details' course.id %}" class="course-link">
+                    <img src="{{ course.image.url }}" alt="{{ course.title }}">
+                    <h3>{{ course.title }}</h3>
+                    <p>{{ course.instructor }}</p>
+                    <p>{{ course.price }} บาท</p>
+                </a>
+    
+                <!-- ✅ ปุ่ม "จองคอร์ส" เชื่อมไปหน้าอื่น -->
                 <a href="{% url 'register' %}" class="btn-course-2">จองคอร์ส</a>
             </div>
             {% empty %}
@@ -119,5 +123,6 @@
             {% endfor %}
         </div>
     </section>
+    
 </main>
 {% endblock %}

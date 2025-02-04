@@ -3,6 +3,7 @@ from . import views
 from .views import register, login_view
 from rest_framework_simplejwt.views import TokenRefreshView
 
+
 urlpatterns = [
     # สำหรับ Web
     path('register/', register, name='register'),
@@ -14,7 +15,6 @@ urlpatterns = [
     path('change-password/', views.change_password, name='change_password'),
     path('all-courses/', views.all_courses, name='all_courses'),
     path('user-list/', views.user_list, name='user_list'),  # ✅ ตรวจสอบเส้นทาง
-    path('staff/', views.staff_list, name='staff_list'),  # URL สำหรับหน้า "บุคลากร"
     path('staff/add/<int:user_id>/', views.add_staff, name='add_staff'),  # ✅ เพิ่ม <int:user_id>
     path('contact/', views.contact, name='contact'),  # เพิ่ม path สำหรับหน้าติดต่อเรา
     path('instructor/', views.instructor_sales, name='instructor_sales'),
@@ -46,6 +46,29 @@ urlpatterns = [
     path('instructor/logout/', views.instructor_logout, name='instructor_logout'),  # Logout สำหรับ Instructor
     path('admin_logout/', views.admin_logout, name='admin_logout'), 
     path('courses/<int:course_id>/', views.course_details, name='course_details'),
+    path('register-instructor/', views.register_instructor, name='register_instructor'),
+    path('staff/', views.instructor_list, name='instructor_list'),
+    path('admin_banners/', views.banners_admin, name='banners_admin'),
+    path('approve_banner/<int:banner_id>/', views.approve_banner, name='approve_banner'),
+    path('reject_banner/<int:banner_id>/', views.reject_banner, name='reject_banner'),
+    path('course_details_admin/<int:course_id>/', views.course_details_admin, name='course_details_admin'),
+    path('booking/<int:course_id>/', views.booking_course, name='booking_course'),
+    path("submit-booking/<int:course_details_id>/", views.submit_booking, name="submit_booking"),
+
+    path("payment/<int:booking_id>/", views.payment_page, name="payment_page"),
+    path("submit-payment/<int:booking_id>/", views.submit_payment, name="submit_payment"),
+    path('success/', views.success_page, name='success_page'),  # ✅ หน้าแสดงผลสำเร็จ
+        
+    path("sales/booking/<int:course_id>/", views.booking_detail, name="booking_detail"),
+    path("sales/video/<int:order_id>/", views.video_order_detail, name="video_order_detail"),
+
+    path("instructor/sales/", views.instructor_sales, name="instructor_sales"),
+    path("instructor/booking/<int:course_id>/", views.instructor_booking_detail, name="instructor_booking_detail"),
+    path("instructor/video/<int:order_id>/", views.instructor_video_order_detail, name="instructor_video_order_detail"),
+    path("booking-history/", views.user_booking_history, name="booking_history"),
+
+
+
     
     
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

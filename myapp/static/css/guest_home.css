@@ -127,7 +127,9 @@ body {
     object-fit: cover;
     margin-bottom: 10px;
 }
-
+a {
+    text-decoration: none;
+}
 .course-item h3 {
     font-size: 18px;
     color: #4A148C;

@@ -17,14 +17,14 @@
         <h1>ข้อมูลผู้ใช้งาน</h1>
         <div class="profile-card">
             <div class="profile-img-container">
-                <img src="{% static 'images/profile-icon.png' %}" alt="Profile" class="profile-img">
+                <img src="{{ user.profile.get_profile_picture }}" alt="Profile" class="profile-img">
             </div>
             <h2>{{ user.username }}</h2>
             <div class="profile-actions">
                 <a href="{% url 'update_profile'%}" class="btn btn-pink">
                     <i class="fas fa-user-edit"></i> แก้ไขข้อมูลส่วนตัว
                 </a>
-                <a href="#" class="btn btn-blue">
+                <a href="{% url 'booking_history' %}" class="btn btn-blue">
                     <i class="fas fa-calendar-alt"></i> ประวัติการจองคอร์สเรียน
                 </a>
                 <a href="{% url 'logout' %}" class="btn btn-lightblue">

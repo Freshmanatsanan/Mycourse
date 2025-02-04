@@ -1,0 +1,101 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #FFF7F2;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 600px;
+    margin: 50px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+h2 {
+    color: #FF4081;
+}
+
+.section {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+h3 {
+    color: #673AB7;
+}
+
+label {
+    display: block;
+    margin-top: 10px;
+}
+
+input, select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 10px;
+    background: #FF4081;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.btn-submit:hover {
+    background: #E91E63;
+}
+
+.course-preview {
+    text-align: center;
+    background: linear-gradient(
+        to right,
+        rgba(180, 220, 240, 0.8), /* สีน้ำเงินอ่อน */
+        rgba(240, 200, 230, 0.8), /* สีชมพูอ่อน */
+        rgba(250, 190, 150, 0.8) /* สีส้มอ่อน */
+    );/* สีชมพูอ่อน */
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.course-preview h2 {
+    color: #d81b60; /* สีชมพูเข้ม */
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.course-image {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    margin: 10px 0;
+}
+
+/* ✅ ปรับปรุงการแสดงชื่อคอร์ส */
+.course-preview h3 {
+    font-size: 22px;
+    color: #333;
+    margin: 10px 0;
+}
+
+/* ✅ ปรับปรุงคำอธิบาย */
+.course-preview p {
+    font-size: 16px;
+    color: #555;
+    line-height: 1.5;
+    margin-top: 10px;
+}
