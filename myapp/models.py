@@ -55,7 +55,7 @@ class VideoCourse(models.Model):
 
 class CourseDetails(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
-    name = models.CharField(max_length=255,unique=True)
+    name = models.CharField(max_length=255)
     description = models.TextField()
     additional_description = models.TextField()
     image = models.ImageField(upload_to='course_images/')
