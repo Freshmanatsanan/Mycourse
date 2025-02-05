@@ -34,7 +34,7 @@
                             <td>{{ course.instructor }}</td>
                             <p class="price">{{ course.price }} ฿</p>
                             <div class="course-buttons">
-                                <a href="#" class="btn blue">จองคอร์ส</a>
+                                <a href="{% url 'booking_course' course.id %}" class="btn blue">จองคอร์ส</a>
                                 <a href="{% url 'course_details' course.id %}" class="btn orange">ดูรายละเอียดเพิ่มเติม</a>
                             </div>
                         </div>

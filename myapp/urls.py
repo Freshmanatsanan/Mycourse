@@ -82,6 +82,7 @@ urlpatterns = [
     path('api/staffs/', views.staff_list_api, name='staff_list_api'),
     path('api/profile/', views.profile_api, name='profile_api'),
     path('api/profile/update/', views.update_profile_api, name='update_profile_api'),
+    path('api/course/<int:course_id>/', views.course_details_api, name='course_details_api'),
 
 
 ]

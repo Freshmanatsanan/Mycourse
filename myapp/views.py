@@ -35,7 +35,7 @@ from django.core.files.storage import FileSystemStorage
 from .models import CourseBooking
 from django.db.models import Count
 from django.core.paginator import Paginator
-
+from .serializers import CourseDetailsSerializer, AddCourseSerializer 
 
 def register(request):
     if request.method == 'POST':    
@@ -318,6 +318,23 @@ def update_profile_api(request):
     profile.save()
 
     return Response({"message": "อัปเดตโปรไฟล์สำเร็จ"}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def course_details_api(request, course_id):
+    """
+    API สำหรับดึงรายละเอียดคอร์สตาม `course_id`
+    """
+    course_details = get_object_or_404(CourseDetails, course_id=course_id)  # ดึงข้อมูล CourseDetails
+    add_course = course_details.course  # ดึงข้อมูล add_course ที่เป็น ForeignKey
+    
+    # แปลงข้อมูลเป็น JSON ด้วย Serializer
+    course_data = CourseDetailsSerializer(course_details).data
+    add_course_data = AddCourseSerializer(add_course).data  # แปลง add_course เป็น JSON
+
+    return Response({
+        "course_details": course_data,
+        "add_course": add_course_data
+    }, status=status.HTTP_200_OK)
 
 
 

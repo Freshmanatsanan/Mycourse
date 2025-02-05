@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Profile  # นำเข้า Model Profile
+from .models import UserProfile  # นำเข้า Model Profile
+from .models import CourseDetails,Course
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,7 +31,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     profile_picture = serializers.ImageField(required=False)  # อนุญาตให้อัปโหลดรูปภาพได้
 
     class Meta:
-        model = Profile
+        model = UserProfile
         fields = ['profile_picture']
 
 
@@ -41,3 +42,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'first_name', 'last_name', 'email', 'profile']
+
+class CourseDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseDetails
+        fields = '__all__' 
+
+class AddCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = '__all__' 
