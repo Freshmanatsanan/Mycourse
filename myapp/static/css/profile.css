@@ -131,3 +131,22 @@ h2 {
     margin-right: 8px;
     font-size: 18px;
 }
+.btn-back {
+    display: inline-block;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background-color: #f4f4f4;
+    color: #333;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn-back i {
+    margin-right: 5px;
+}
+
+.btn-back:hover {
+    background-color: #ddd;
+}
