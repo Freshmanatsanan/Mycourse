@@ -326,17 +326,28 @@ def course_details_api(request, course_id):
     """
     course_details = get_object_or_404(CourseDetails, course_id=course_id)  # ดึงข้อมูล CourseDetails
     add_course = course_details.course  # ดึงข้อมูล add_course ที่เป็น ForeignKey
-    
-    # แปลงข้อมูลเป็น JSON ด้วย Serializer
+
+    def build_full_url(image_field):
+        """ แปลง Path เป็น URL เต็ม """
+        if image_field and hasattr(image_field, 'url'):
+            return request.build_absolute_uri(image_field.url)
+        return None
+
+    # สร้าง URL เต็มของรูปภาพหลักและเพิ่มเติม
     course_data = CourseDetailsSerializer(course_details).data
-    add_course_data = AddCourseSerializer(add_course).data  # แปลง add_course เป็น JSON
+    add_course_data = AddCourseSerializer(add_course).data
+
+    course_data["image"] = build_full_url(course_details.image)
+    course_data["additional_image"] = build_full_url(course_details.additional_image)
+    course_data["extra_image_1"] = build_full_url(course_details.extra_image_1)
+    course_data["extra_image_2"] = build_full_url(course_details.extra_image_2)
+    
+    add_course_data["image"] = build_full_url(add_course.image)
 
     return Response({
         "course_details": course_data,
         "add_course": add_course_data
     }, status=status.HTTP_200_OK)
-
-
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
