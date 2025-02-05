@@ -83,6 +83,11 @@ urlpatterns = [
     path('api/profile/', views.profile_api, name='profile_api'),
     path('api/profile/update/', views.update_profile_api, name='update_profile_api'),
     path('api/course/<int:course_id>/', views.course_details_api, name='course_details_api'),
+    path("api/book-course/<int:course_id>/", views.api_submit_booking, name="api_submit_booking"),
+    path("api/payment-details/<int:booking_id>/", views.api_payment_details, name="api_payment_details"),
+    path("api/submit-payment/<int:booking_id>/", views.api_submit_payment, name="api_submit_payment"),
+    path("api/booking-status/<int:booking_id>/", views.api_booking_status, name="api_booking_status"),
+    path("api/my-bookings/", views.api_user_bookings, name="api_user_bookings"),
 
 
 ]

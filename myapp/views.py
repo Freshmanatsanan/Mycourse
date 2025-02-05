@@ -349,6 +349,113 @@ def course_details_api(request, course_id):
         "add_course": add_course_data
     }, status=status.HTTP_200_OK)
 
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_submit_booking(request, course_id):
+    """
+    API สำหรับจองคอร์สเรียน
+    """
+    course_details = get_object_or_404(CourseDetails, course_id=course_id)
+    course_selected = course_details.course
+
+    data = request.data
+    selected_course = data.get("selected_course", "").strip()
+
+    if not selected_course:
+        return Response({"error": "กรุณาเลือกคอร์สก่อนดำเนินการต่อ"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # ✅ ดึงข้อมูลจาก API Request
+    booking = CourseBooking.objects.create(
+        user=request.user,
+        student_name=data.get("student_name", ""),
+        student_name_en=data.get("student_name_en", ""),
+        nickname_th=data.get("nickname_th", ""),
+        nickname_en=data.get("nickname_en", ""),
+        age=data.get("age", ""),
+        grade=data.get("grade", ""),
+        other_grade=data.get("other_grade", ""),
+        parent_nickname=data.get("parent_nickname", ""),
+        phone=data.get("phone", ""),
+        line_id=data.get("line_id", ""),
+        course=course_selected,
+        selected_course=selected_course,
+        booking_status="pending",
+        payment_status="pending"
+    )
+
+    return Response({
+        "message": "✅ การจองสำเร็จ! โปรดดำเนินการชำระเงิน",
+        "booking_id": booking.id
+    }, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_payment_details(request, booking_id):
+    """
+    API สำหรับดึงรายละเอียดการชำระเงิน
+    """
+    booking = get_object_or_404(CourseBooking, id=booking_id, user=request.user)
+    course_details = get_object_or_404(CourseDetails, course=booking.course)
+    course = course_details.course
+
+    qr_code_url = request.build_absolute_uri(course.payment_qr.url) if course.payment_qr else None
+
+    return Response({
+        "booking_id": booking.id,
+        "course_name": course.name,
+        "course_price": course.price,
+        "qr_code_url": qr_code_url,
+        "payment_status": booking.payment_status
+    }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_submit_payment(request, booking_id):
+    """
+    API สำหรับอัปโหลดสลิปการชำระเงิน
+    """
+    booking = get_object_or_404(CourseBooking, id=booking_id, user=request.user)
+
+    if "payment_slip" not in request.FILES:
+        return Response({"error": "กรุณาอัปโหลดไฟล์สลิป"}, status=status.HTTP_400_BAD_REQUEST)
+
+    payment_slip = request.FILES["payment_slip"]
+    fs = FileSystemStorage()
+    filename = fs.save(payment_slip.name, payment_slip)
+
+    # ✅ บันทึกไฟล์ลงฐานข้อมูล
+    booking.payment_slip = filename
+    booking.payment_status = "pending"
+    booking.save()
+
+    return Response({"message": "✅ อัปโหลดสลิปสำเร็จ! กรุณารอการตรวจสอบ"}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_booking_status(request, booking_id):
+    """
+    API สำหรับตรวจสอบสถานะการจอง
+    """
+    booking = get_object_or_404(CourseBooking, id=booking_id, user=request.user)
+    return Response({
+        "booking_id": booking.id,
+        "booking_status": booking.booking_status,
+        "payment_status": booking.payment_status
+    }, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_user_bookings(request):
+    """
+    API สำหรับดึงประวัติการจองของผู้ใช้
+    """
+    bookings = CourseBooking.objects.filter(user=request.user)
+    serializer = CourseBookingSerializer(bookings, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
