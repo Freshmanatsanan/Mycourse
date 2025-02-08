@@ -36,6 +36,7 @@ from .models import CourseBooking
 from django.db.models import Count
 from django.core.paginator import Paginator
 from .serializers import CourseDetailsSerializer, AddCourseSerializer 
+from myapp.serializers import CourseBookingSerializer
 
 def register(request):
     if request.method == 'POST':    
@@ -404,7 +405,7 @@ def api_payment_details(request, booking_id):
 
     return Response({
         "booking_id": booking.id,
-        "course_name": course.name,
+        "course_name": course.title,
         "course_price": course.price,
         "qr_code_url": qr_code_url,
         "payment_status": booking.payment_status

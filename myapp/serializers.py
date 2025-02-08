@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import UserProfile  # นำเข้า Model Profile
 from .models import CourseDetails,Course
+from myapp.models import CourseBooking 
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,4 +52,9 @@ class CourseDetailsSerializer(serializers.ModelSerializer):
 class AddCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
+        fields = '__all__' 
+
+class CourseBookingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseBooking
         fields = '__all__' 
