@@ -3,6 +3,12 @@ from django.contrib.auth.models import User
 from .models import UserProfile  # นำเข้า Model Profile
 from .models import CourseDetails,Course, CourseBooking
 from myapp.models import CourseBooking 
+from django.utils.timezone import localtime
+
+def get_booking_date(self, obj):
+    if obj.booking_date:
+        return localtime(obj.booking_date).strftime("%d %b %Y, %H:%M")
+    return "ไม่ระบุวันที่"
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -86,3 +92,35 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             'nickname_th', 'nickname_en', 'age', 'grade', 'parent_nickname', 
             'phone', 'line_id', 'booking_status', 'payment_slip'
         ]
+
+
+
+
+class BookingHistorySerializer(serializers.ModelSerializer):
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    booking_date = serializers.SerializerMethodField()
+    selected_course = serializers.SerializerMethodField()
+    booking_status_display = serializers.CharField(source="get_booking_status_display", read_only=True)
+    payment_status_display = serializers.CharField(source="get_payment_status_display", read_only=True)
+    payment_slip_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CourseBooking
+        fields = [
+            "id", "course_title", "selected_course", "booking_date",
+            "booking_status_display", "payment_status_display", "payment_slip_url"
+        ]
+
+    def get_booking_date(self, obj):
+       if obj.booking_date:
+           return localtime(obj.booking_date).strftime("%d %b %Y, %H:%M")
+       return "ไม่ระบุวันที่"
+
+    def get_selected_course(self, obj):
+        return obj.get_selected_course_display()
+
+    def get_payment_slip_url(self, obj):
+        request = self.context.get('request')
+        if obj.payment_slip:
+            return request.build_absolute_uri(obj.payment_slip.url)
+        return None

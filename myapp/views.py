@@ -45,7 +45,7 @@ import string
 import datetime
 from django.utils.timezone import now
 import re
-from .serializers import BookingDetailSerializer, CourseSerializer
+from .serializers import BookingDetailSerializer, CourseSerializer,BookingHistorySerializer
 
 
 
@@ -256,7 +256,7 @@ def login_api(request):
 @permission_classes([AllowAny])
 def get_approved_courses(request):
     try:
-        approved_courses = Course.objects.filter(status='approved')
+        approved_courses = Course.objects.filter(status='approved', is_closed=False)
         courses_data = []
         for course in approved_courses:
             courses_data.append({
@@ -504,6 +504,18 @@ def booking_my_courses_api(request, course_id):
         "course": CourseSerializer(course, context={'request': request}).data,
         "bookings": serializer.data
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_booking_history_api(request):
+    """
+    API สำหรับดึงประวัติการจองของผู้ใช้ที่ล็อกอินอยู่
+    """
+    bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
+    serializer = BookingHistorySerializer(bookings, many=True, context={'request': request})
+
+    return Response(serializer.data)
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 

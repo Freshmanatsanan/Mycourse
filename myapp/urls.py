@@ -98,6 +98,7 @@ urlpatterns = [
     path("api/my-bookings/", views.api_user_bookings, name="api_user_bookings"),
     path('api/my-courses/', views.my_courses_api, name='my_courses_api'),
     path('api/booking-my-courses/<int:course_id>/', views.booking_my_courses_api, name='booking_my_courses_api'),
+    path('api/user-booking-history/',views.user_booking_history_api, name='user_booking_history_api'),
 
 
 ]
