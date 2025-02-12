@@ -8,6 +8,7 @@
 <style>
     /* ป๊อปอัป */
     .popup-container {
+        font-family: "Mali", serif;
         display: none;
         position: fixed;
         top: 0;
@@ -74,6 +75,45 @@
         color: red;
         font-weight: bold;
     }
+    
+/* ปุ่มปิดรับสมัคร */
+.btn-close2 {
+    font-family: "Mali", serif;
+    margin-top: 10px;
+    background-color: #FF5733;
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: 0.3s;
+}
+
+.btn-close2:hover {
+    background-color: #C70039;
+    transform: scale(1.05);
+}
+
+/* ปุ่มเปิดรับสมัคร */
+.btn-reopen {
+    margin-top: 10px;
+    font-family: "Mali", serif;
+    background-color: #4CAF50;
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: 0.3s;
+}
+
+.btn-reopen:hover {
+    background-color: #388E3C;
+    transform: scale(1.05);
+}
+
 </style>
 {% endblock %}
 
@@ -146,7 +186,18 @@
                                 </td>
                                 <td>
                                     <a href="{% url 'edit_course' course.id %}" class="btn-edit">แก้ไข</a>
+                                {% if course.status == 'approved' %}
+                                    {% if course.is_closed %}
+                                    <button class="btn-reopen" onclick="confirmReopen('{{ course.id }}')">เปิดรับสมัครอีกครั้ง</button>
+                                    {% else %}
+                                <button class="btn-close2" onclick="confirmClose('{{ course.id }}')">สิ้นสุดการรับสมัคร</button>
+                                    {% endif %}
+                                   
+                                   
+                                {% endif %}
+
                                 </td>
+                                
                             </tr>
                             {% empty %}
                             <tr>
@@ -169,6 +220,18 @@
     </div>
 
     <script>
+function confirmClose(courseId) {
+    if (confirm("คุณต้องการสิ้นสุดการรับสมัครของคอร์สนี้หรือไม่?")) {
+        window.location.href = `/close-course/${courseId}/`;
+    }
+}
+
+
+    function confirmReopen(courseId) {
+        if (confirm("คุณต้องการเปิดรับสมัครของคอร์สนี้อีกครั้งหรือไม่?")) {
+            window.location.href = `/reopen-course/${courseId}/`;
+        }
+    }
         function showPopup(message) {
             const popup = document.getElementById('popup');
             const popupMessage = document.getElementById('popup-message');

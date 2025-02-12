@@ -1,4 +1,5 @@
 .dashboard-container {
+    font-family: "Mali", serif;
     max-width: 800px;
     margin: auto;
     padding: 20px;
@@ -8,6 +9,7 @@
 }
 
 .dashboard-title {
+    font-family: "Mali", serif;
     text-align: center;
     color: #333;
     margin-bottom: 20px;

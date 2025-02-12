@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import UserProfile  # นำเข้า Model Profile
-from .models import CourseDetails,Course
+from .models import CourseDetails,Course, CourseBooking
 from myapp.models import CourseBooking 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -58,3 +58,23 @@ class CourseBookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = CourseBooking
         fields = '__all__' 
+        
+class CourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = ['id', 'title', 'description', 'price', 'image']
+
+
+# ✅ **แก้ไข BookingDetailSerializer**
+class BookingDetailSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email')
+    course = CourseSerializer()  # ✅ ตอนนี้มันถูกนิยามแล้ว
+
+    class Meta:
+        model = CourseBooking
+        fields = [
+            'id', 'course', 'user_email', 'student_name', 'student_name_en', 
+            'nickname_th', 'nickname_en', 'age', 'grade', 'parent_nickname', 
+            'phone', 'line_id', 'booking_status', 'payment_slip'
+        ]
+

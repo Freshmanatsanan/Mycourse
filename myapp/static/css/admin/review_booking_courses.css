@@ -1,4 +1,5 @@
 body {
+    font-family: "Mali", serif;
     margin: 0; /* ลบระยะขอบรอบด้าน */
     padding: 0; /* ลบระยะ padding รอบด้าน */
     font-family: 'Arial', sans-serif; /* ตั้งฟอนต์มาตรฐาน */
@@ -8,6 +9,7 @@ body {
     line-height: 1.6; /* ความสูงของบรรทัดให้ดูอ่านง่าย */
 }
 .dashboard-container {
+    font-family: "Mali", serif;
     padding: 10px;
     background-color: #ffffff;
     min-height: 50vh; /* ให้เนื้อหาเต็มหน้าจอแนวตั้ง */
@@ -144,7 +146,7 @@ textarea {
     margin: 0;
     padding: 0;
     font-family: 'Arial', sans-serif;
-    font-size: 16px;
+    font-size: 13px;
     color: #333;
     background-color: #FFF7F2;
     line-height: 1.6;
@@ -253,6 +255,7 @@ textarea {
 .btn-cancel {
     background-color: #dc3545;
     color: white;
+    font-size: 12px;
 }
 
 .btn-cancel:hover {
@@ -287,6 +290,7 @@ textarea {
 
     background-color: #ffc107;
     color: #fff;
+    font-size: 12px;
 }
 
 .btn-revision:hover {

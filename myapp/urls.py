@@ -54,19 +54,27 @@ urlpatterns = [
     path('course_details_admin/<int:course_id>/', views.course_details_admin, name='course_details_admin'),
     path('booking/<int:course_id>/', views.booking_course, name='booking_course'),
     path("submit-booking/<int:course_details_id>/", views.submit_booking, name="submit_booking"),
-
     path("payment/<int:booking_id>/", views.payment_page, name="payment_page"),
     path("submit-payment/<int:booking_id>/", views.submit_payment, name="submit_payment"),
-    path('success/', views.success_page, name='success_page'),  # ✅ หน้าแสดงผลสำเร็จ
-        
     path("sales/booking/<int:course_id>/", views.booking_detail, name="booking_detail"),
     path("sales/video/<int:order_id>/", views.video_order_detail, name="video_order_detail"),
-
     path("instructor/sales/", views.instructor_sales, name="instructor_sales"),
     path("instructor/booking/<int:course_id>/", views.instructor_booking_detail, name="instructor_booking_detail"),
     path("instructor/video/<int:order_id>/", views.instructor_video_order_detail, name="instructor_video_order_detail"),
     path("booking-history/", views.user_booking_history, name="booking_history"),
-
+    path('my-courses/', views.my_courses, name='my_courses'),  # คอร์สเรียนของฉัน
+    path('booking-my-courses/<int:course_id>/', views.booking_my_courses, name='booking_my_courses'), 
+    path('profile-instructor/', views.profile_instructor, name='profile_instructor'), 
+    path('update-profile-instructor/', views.update_profile_instructor, name='update_profile_instructor'), 
+    path('profile-admin/', views.profile_admin, name='profile_admin'), 
+    path('update-profile-admin/', views.update_profile_admin, name='update_profile_admin'), 
+    path('reset-password/', views.request_reset_password, name='reset_password_request'),
+    path('verify-reset-pin/', views.verify_reset_password, name='verify_reset_pin'),
+    path('set-new-password/', views.reset_password, name='reset_password'),
+    path("update-booking-status/<int:booking_id>/<str:status>/", views.update_booking_status, name="update_booking_status"),
+    path('cancel-booking/<int:booking_id>/', views.cancel_booking, name='cancel_booking'),
+    path('close-course/<int:course_id>/', views.close_course, name='close_course'),
+    path('reopen-course/<int:course_id>/', views.reopen_course, name='reopen_course'),
 
 
     
@@ -88,6 +96,8 @@ urlpatterns = [
     path("api/submit-payment/<int:booking_id>/", views.api_submit_payment, name="api_submit_payment"),
     path("api/booking-status/<int:booking_id>/", views.api_booking_status, name="api_booking_status"),
     path("api/my-bookings/", views.api_user_bookings, name="api_user_bookings"),
+    path('api/my-courses/', views.my_courses_api, name='my_courses_api'),
+    path('api/booking-my-courses/<int:course_id>/', views.booking_my_courses_api, name='booking_my_courses_api'),
 
 
 ]

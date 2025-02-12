@@ -1,4 +1,5 @@
 .body-wrapper {
+    font-family: "Mali", serif;
     background-color: #FFF7F2; /* สีพื้นหลัง */
     margin: 10;
     padding: 0;
@@ -11,6 +12,7 @@
 }
 
 .dashboard-container {
+    font-family: "Mali", serif;
     width: 92%;
     background-color: #fff;
     border-radius: 10px;

@@ -1,4 +1,5 @@
 .body-container {
+    font-family: "Mali", serif;
     background-color: #FFF7F2;
     display: flex;; /* ปรับจาก center เป็น flex-start เพื่อให้อยู่ชิดซ้าย */
     align-items: center;

@@ -1,5 +1,6 @@
 /* Sidebar */
 .sidebar {
+    font-family: "Mali", serif;
     width: 300px;
     height: calc(100vh - 100px); /* ลดความสูงลงตาม Header */
     background-color: #ffe6f2;
@@ -86,4 +87,68 @@
 /* Hover Effect */
 .logout-btn:hover {
     background-color: #ffffff; /* สีแดงเข้มขึ้นเมื่อ Hover */
+}
+.profile-username {
+    font-size: 16px; /* ✅ ปรับขนาดตัวอักษร */
+    color: #18A9E4; /* ✅ ปรับสีให้เหมาะกับธีม */
+    font-weight: bold;
+    white-space: nowrap; /* ✅ ป้องกันข้อความขึ้นบรรทัดใหม่ */
+}
+.profile-img-container {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 9px auto; /* จัดให้อยู่ตรงกลางและเพิ่มระยะห่างล่าง */
+    border-radius: 50%;
+    overflow: hidden; /* ป้องกันภาพล้นออกจากกรอบ */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    background-color: #fff; /* พื้นหลังวงกลม */
+
+    /* ✅ ใช้ `position: relative;` เพื่อรองรับการสร้างขอบ */
+    position: relative;
+    padding: 2.5px; /* เพิ่มระยะห่างขอบ */
+
+    /* ✅ เพิ่มเส้นขอบไล่สี */
+    background: linear-gradient(135deg, #613E74, #FF6B6B, #FFD93D);
+}
+
+/* ✅ สร้างเลเยอร์ขอบแบบไล่สี */
+.profile-img-container::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    z-index: -1;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #613E74, #FF6B6B, #FFD93D); /* ไล่สี */
+}
+
+/* ✅ ปรับขนาดภาพโปรไฟล์ */
+.profile-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* ป้องกันภาพผิดสัดส่วน */
+    border-radius: 50%;
+    background-color: white; /* เผื่อภาพมีช่องว่าง */
+}
+
+.profile-icon {
+    display: flex;
+    flex-direction: column;  /* ✅ จัดให้อยู่เรียงในแนวตั้ง */
+    align-items: center;  /* ✅ จัดให้อยู่กึ่งกลาง */
+    text-align: center;
+    gap: 5px;  /* ✅ ปรับระยะห่างระหว่างรูปโปรไฟล์และชื่อ */
+}
+
+.profile-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none; /* ✅ เอาขีดเส้นใต้ลิงก์ออก */
+    color: #BF81B2; /* ✅ ปรับสีของ username */
+    font-weight: bold;
+    gap: 20px;
 }

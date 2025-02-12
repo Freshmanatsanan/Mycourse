@@ -1,5 +1,6 @@
 /* General Styles */
 .header {
+    font-family: "Mali", serif;
     width: 100%;
     height: 10%;
     background: linear-gradient(
@@ -52,10 +53,17 @@
 .title h1 {
     font-size: 2rem; /* ปรับขนาด */
     font-weight: bold;
-    color: #663399;
+    color: #613E74;
     margin: 0;
 }
 
+
 .title .highlight {
-    color: #FF5733;
+    color: #18A9E4;
+}
+.title .highlight2 {
+    color: #FF7D0C;
+}
+.title .highlight3 {
+    color: #BF81B2;
 }

@@ -37,6 +37,17 @@ from django.db.models import Count
 from django.core.paginator import Paginator
 from .serializers import CourseDetailsSerializer, AddCourseSerializer 
 from myapp.serializers import CourseBookingSerializer
+from django.contrib import messages
+from django.core.mail import send_mail
+from django.conf import settings
+import random
+import string
+import datetime
+from django.utils.timezone import now
+import re
+from .serializers import BookingDetailSerializer
+
+
 
 def register(request):
     if request.method == 'POST':    
@@ -46,7 +57,7 @@ def register(request):
         email = request.POST['email']
         password = request.POST['password']
         password2 = request.POST['password2']
-
+        messages.get_messages(request).used = True
         # ตรวจสอบความยาวของรหัสผ่าน
         if len(password) < 8:
             messages.error(request, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร')
@@ -75,8 +86,9 @@ def register(request):
                 except Group.DoesNotExist:
                     messages.warning(request, 'Group "Member" ยังไม่ได้ถูกสร้างในระบบ')
 
-                messages.success(request, 'สร้างบัญชีสำเร็จแล้ว')
-                return redirect('login')
+                messages.success(request, "✅ สมัครสมาชิกสำเร็จ!")
+                return redirect("register") 
+            
 
     return render(request, 'register.html')
 
@@ -292,6 +304,7 @@ def profile_api(request):
         "last_name": user.last_name,
         "email": user.email,
         "profile_picture": request.build_absolute_uri(profile.profile_picture.url) if profile.profile_picture else None
+        
     }
     return Response(data, status=status.HTTP_200_OK)
 
@@ -402,6 +415,8 @@ def api_payment_details(request, booking_id):
     course = course_details.course
 
     qr_code_url = request.build_absolute_uri(course.payment_qr.url) if course.payment_qr else None
+    
+    
 
     return Response({
         "booking_id": booking.id,
@@ -456,6 +471,37 @@ def api_user_bookings(request):
     bookings = CourseBooking.objects.filter(user=request.user)
     serializer = CourseBookingSerializer(bookings, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_courses_api(request):
+    """API สำหรับดึงคอร์สที่ผู้ใช้จอง"""
+    bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
+    serializer = CourseBookingSerializer(bookings, many=True, context={'request': request})
+    return Response(serializer.data) 
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def booking_my_courses_api(request, course_id):
+    """API สำหรับดึงรายละเอียดของการจองคอร์ส"""
+    course = get_object_or_404(Course, id=course_id)
+    bookings = CourseBooking.objects.filter(course=course).order_by("-booking_date")
+    serializer = BookingDetailSerializer(bookings, many=True, context={'request': request})
+    
+    return Response({
+        "course": {
+            "id": course.id,
+            "title": course.title,
+            "description": course.description,
+            "price": course.price,
+            "image": request.build_absolute_uri(course.image.url) if course.image else None
+        },
+        "bookings": serializer.data
+    })
+
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -894,7 +940,7 @@ def add_staff(request, user_id):  # รับ user_id เป็นพารา�
 
 def home(request):
     banners = Banner.objects.filter(status="approved") 
-    approved_courses = Course.objects.filter(status='approved')
+    approved_courses = Course.objects.filter(status='approved', is_closed=False)
     
     if request.user.is_authenticated:
         return render(request, 'home.html', {
@@ -908,12 +954,27 @@ def home(request):
     })  # สำหรับผู้ที่ยังไม่ได้เป็นสมาชิก
 
 
-
-
 def all_courses(request):
+    """ แสดงเฉพาะคอร์สที่ได้รับอนุมัติและยังเปิดรับสมัคร """
+    query = request.GET.get('q', '')
+    
+    # ✅ กรองเฉพาะคอร์สที่ได้รับอนุมัติและยังเปิดรับสมัคร
+    approved_courses = Course.objects.filter(status='approved', is_closed=False)  
+
+    if query:
+        approved_courses = approved_courses.filter(
+            Q(title__icontains=query) | 
+            Q(description__icontains=query)
+        )
+
+    template_name = 'all_courses.html' if request.user.is_authenticated else 'guest_all_courses.html'
+    return render(request, template_name, {'courses': approved_courses, 'query': query})
+
+
+#def all_courses(request):
     # ค้นหาคอร์สที่มีสถานะ 'approved'
     query = request.GET.get('q', '')  # รับค่าค้นหาจากช่องค้นหา
-    approved_courses = Course.objects.filter(status='approved')
+    approved_courses = Course.objects.filter(status='approved',is_closed=False)
 
     # ✅ ถ้ามีการค้นหา ให้กรองผลลัพธ์
     if query:
@@ -954,6 +1015,31 @@ def update_profile(request):
     
     return render(request, 'edit_profile.html', {'user': request.user, 'profile': request.user.profile})
 
+
+@login_required
+def profile_instructor(request):
+    return render(request, 'instructor/profile_instructor.html', {'user': request.user, 'profile': request.user.profile})
+
+@login_required
+def update_profile_instructor(request):
+    if request.method == 'POST':
+        user = request.user
+        profile = user.profile
+
+        user.username = request.POST.get('username', user.username)
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.email = request.POST.get('email', user.email)
+        user.save()
+
+        if 'profile_picture' in request.FILES:
+            profile.profile_picture = request.FILES['profile_picture']
+            profile.save()  # ✅ บันทึกการเปลี่ยนแปลง
+            
+        messages.success(request, "บันทึกข้อมูลเรียบร้อยแล้ว!")
+        return redirect(reverse('profile_instructor')) 
+    
+    return render(request, 'instructor/update_profile_instructor.html', {'user': request.user, 'profile': request.user.profile})
 
 @login_required
 def logout_view(request):
@@ -1068,6 +1154,17 @@ def course_details_admin(request, course_id):
     # ส่งข้อมูลคอร์สไปที่ Template
     return render(request, 'admin/course_details_admin.html', {'course': course, 'add_course': add_course})
 
+def update_booking_status(request, booking_id, status):
+    booking = get_object_or_404(CourseBooking, id=booking_id)
+
+    if status in ["confirmed", "rejected"]:
+        booking.booking_status = status
+        booking.save()
+        
+        # ✅ แจ้งเตือนผู้ใช้
+        messages.success(request, f"อัปเดตสถานะเป็น {booking.get_booking_status_display()} สำเร็จ!")
+
+    return redirect("booking_detail", course_id=booking.course.id)
 
 
 def booking_course(request, course_id):
@@ -1163,8 +1260,7 @@ def submit_payment(request, booking_id):
     messages.error(request, "⚠ กรุณาอัปโหลดไฟล์สลิป")
     return redirect("payment_page", booking_id=booking.id)
 
-def success_page(request):
-    return render(request, "success.html")
+
 
 
 @login_required
@@ -1238,3 +1334,219 @@ def user_booking_history(request):
     return render(request, "booking_history.html", {
         "bookings": bookings
     })
+
+@login_required
+def my_courses(request):
+    """ แสดงเฉพาะคอร์สที่ผู้ใช้จอง """
+    bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
+    return render(request, 'my_courses.html', {'bookings': bookings})
+
+@login_required
+def booking_my_courses(request, course_id):
+    """ แสดงรายละเอียดข้อมูลของผู้ที่จองคอร์ส """
+    course = get_object_or_404(Course, id=course_id)
+    bookings = CourseBooking.objects.filter(course=course).order_by("-booking_date")
+
+    return render(request, "booking_my_courses.html", {
+        "course": course,
+        "bookings": bookings
+    })
+
+
+
+
+@login_required
+def profile_admin(request):
+    return render(request, 'admin/profile_admin.html', {'user': request.user, 'profile': request.user.profile})
+
+@login_required
+def update_profile_admin(request):
+    if request.method == 'POST':
+        user = request.user
+        profile = user.profile
+
+        user.username = request.POST.get('username', user.username)
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.email = request.POST.get('email', user.email)
+        user.save()
+
+        if 'profile_picture' in request.FILES:
+            profile.profile_picture = request.FILES['profile_picture']
+            profile.save()  # ✅ บันทึกการเปลี่ยนแปลง
+            
+        messages.success(request, "บันทึกข้อมูลเรียบร้อยแล้ว!")
+        return redirect(reverse('profile_admin')) 
+    
+    return render(request, 'admin/update_profile_admin.html', {'user': request.user, 'profile': request.user.profile})
+
+
+
+
+def generate_pin():
+    return ''.join(random.choices(string.digits, k=6))
+
+
+def request_reset_password(request):
+    if request.method == "POST":
+        email = request.POST["email"]
+        try:
+            user = User.objects.get(email=email)
+            pin = generate_pin()
+            
+            # ✅ ตั้งค่าเวลาหมดอายุของ PIN (5 นาที)
+            request.session["reset_pin"] = {
+                "pin": pin,
+                "expires_at": (now() + datetime.timedelta(minutes=5)).isoformat()
+            }
+            request.session["reset_email"] = email
+
+            # ✅ ส่งอีเมล PIN ให้ผู้ใช้
+            send_mail(
+                "รหัส PIN รีเซ็ตรหัสผ่าน",
+                f"รหัส PIN ของคุณคือ {pin} (หมดอายุใน 5 นาที)",
+                settings.EMAIL_HOST_USER,
+                [email],
+                fail_silently=False,
+            )
+            return redirect("verify_reset_pin")
+        except User.DoesNotExist:
+            messages.error(request, "ไม่พบอีเมลนี้ในระบบ")
+    
+    return render(request, "reset_password_request.html")
+
+# ✅ 2. หน้า "ยืนยันรหัส PIN"
+def verify_reset_password(request):
+    if request.method == "POST":
+        entered_pin = "".join([
+            request.POST.get("pin1", ""),
+            request.POST.get("pin2", ""),
+            request.POST.get("pin3", ""),
+            request.POST.get("pin4", ""),
+            request.POST.get("pin5", ""),
+            request.POST.get("pin6", ""),
+        ])
+        
+        session_data = request.session.get("reset_pin", {})
+
+        if not session_data:
+            messages.error(request, "รหัส PIN หมดอายุ กรุณาขอใหม่")
+            return redirect("reset_password_request")  
+
+        stored_pin = session_data.get("pin")
+        expires_at = session_data.get("expires_at")
+
+        # ✅ ตรวจสอบว่ารหัส PIN หมดอายุหรือยัง
+        if expires_at and now() > datetime.datetime.fromisoformat(expires_at):
+            del request.session["reset_pin"]
+            messages.error(request, "รหัส PIN หมดอายุ กรุณาขอใหม่")
+            return redirect("reset_password_request")
+
+        # ✅ ตรวจสอบว่ารหัส PIN ตรงกันหรือไม่
+        if entered_pin == stored_pin:
+            return redirect("reset_password")  # ✅ ตรวจสอบว่า `name="reset_password"` ตรงกับ `urls.py`
+        else:
+            messages.error(request, "รหัส PIN ไม่ถูกต้อง กรุณาลองอีกครั้ง")
+
+    return render(request, "reset_password_verify.html")
+
+
+# ✅ 3. หน้า "ตั้งรหัสผ่านใหม่"
+def is_valid_password(password):
+    """✅ ตรวจสอบว่ารหัสผ่านแข็งแกร่งพอหรือไม่"""
+    return (
+        len(password) >= 8 and
+        re.search(r"[0-9]", password)
+    )
+
+def reset_password(request):
+    if request.method == "POST":
+        new_password = request.POST["new_password"]
+        confirm_password = request.POST["confirm_password"]
+
+        if new_password != confirm_password:
+            messages.error(request, "รหัสผ่านไม่ตรงกัน")
+            return render(request, "reset_password_form.html")
+
+        if not is_valid_password(new_password):
+            messages.error(request, "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัว และประกอบด้วยตัวพิมพ์เล็ก, ตัวพิมพ์ใหญ่, และตัวเลข")
+            return render(request, "reset_password_form.html")
+
+        email = request.session.get("reset_email")
+        try:
+            user = User.objects.get(email=email)
+            user.set_password(new_password)
+            user.save()
+
+            # ✅ ลบข้อมูล PIN ออกจาก session หลังจากเปลี่ยนรหัสผ่านสำเร็จ
+            request.session.pop("reset_pin", None)
+            request.session.pop("reset_email", None)
+
+            return render(request, "reset_password_form.html", {"success": True})  # ✅ ส่ง success=True ไปยัง Template
+        except User.DoesNotExist:
+            messages.error(request, "ไม่พบบัญชีผู้ใช้")
+
+    return render(request, "reset_password_form.html")
+
+
+@login_required
+def cancel_booking(request, booking_id):
+    booking = get_object_or_404(CourseBooking, id=booking_id, user=request.user)
+
+    # ✅ เช็คว่าสถานะต้องเป็น "pending" ถึงจะยกเลิกได้
+    if booking.booking_status == "pending":
+        booking.booking_status = "canceled"
+        booking.save()
+        messages.success(request, "✅ คุณได้ยกเลิกการจองคอร์สเรียบร้อยแล้ว")
+    else:
+        messages.error(request, "⚠ ไม่สามารถยกเลิกได้ เนื่องจากการจองนี้ได้รับการยืนยันแล้ว")
+
+    return redirect("my_courses")
+@login_required
+@instructor_required
+def close_course(request, course_id):
+    """ ปิดรับสมัครคอร์ส """
+    print(f"🔍 กำลังปิดรับสมัครของคอร์ส: {course_id}")
+
+    try:
+        # ใช้ course_id ที่ถูกต้องจาก myapp_coursebooking
+        course = get_object_or_404(Course, id=course_id)
+
+        print(f"🔍 ก่อนอัปเดต: {course.is_closed}")
+
+        course.is_closed = True
+        course.save()
+
+        print(f"✅ หลังอัปเดต: {course.is_closed}")
+        messages.success(request, "✅ สิ้นสุดการรับสมัครของคอร์สเรียบร้อยแล้ว")
+    except Course.DoesNotExist:
+        print("❌ ไม่พบคอร์ส")
+        messages.error(request, "❌ ไม่พบคอร์สที่ต้องการปิดรับสมัคร")
+
+    return redirect("reservation_courses")
+
+
+
+
+@login_required
+@instructor_required
+def reopen_course(request, course_id):
+    """ เปิดรับสมัครคอร์สอีกครั้ง """
+    print(f"🔍 กำลังเปิดรับสมัครของคอร์ส: {course_id}")
+
+    try:
+        # ใช้ course_id ที่ถูกต้องจาก myapp_coursebooking
+        course = get_object_or_404(Course, id=course_id)
+
+        print(f"🔍 ก่อนอัปเดต: {course.is_closed}")
+
+        course.is_closed = False
+        course.save()
+
+        print(f"✅ หลังอัปเดต: {course.is_closed}")
+        messages.success(request, "✅ เปิดรับสมัครของคอร์สนี้อีกครั้งเรียบร้อยแล้ว")
+    except Course.DoesNotExist:
+        print("❌ ไม่พบคอร์ส")
+        messages.error(request, "❌ ไม่พบคอร์สที่ต้องการเปิดรับสมัคร")
+
+    return redirect("reservation_courses")

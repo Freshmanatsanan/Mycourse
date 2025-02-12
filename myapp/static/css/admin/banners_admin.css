@@ -1,5 +1,6 @@
 /* ✅ ตั้งค่าพื้นฐานของหน้า */
 .body-wrapper {
+    font-family: "Mali", serif;
     margin: 0; /* ลบระยะขอบรอบด้าน */
     padding: 0; /* ลบระยะ padding รอบด้าน */
     font-family: 'Arial', sans-serif; /* ตั้งฟอนต์มาตรฐาน */
@@ -11,6 +12,7 @@
 
 /* ✅ กล่องหลักของแอดมิน */
 .admin-container1 {
+    font-family: "Mali", serif;
     padding: 10px;
     background-color: #ffffff;
     min-height: 50vh; /* ให้เนื้อหาเต็มหน้าจอแนวตั้ง */
@@ -42,7 +44,7 @@
 }
 
 .admin-table th {
-    background: linear-gradient(135deg, #FF6B6B, #FFD93D);
+    background: #E53935;
     color: white;
     padding: 12px;
     text-align: center;

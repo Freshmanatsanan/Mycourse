@@ -11,6 +11,8 @@ class Course(models.Model):
          ('revision', 'ส่งกลับมาแก้ไข'),
          ('revised', 'แก้ไขแล้วรอการตรวจสอบ'),
     ]
+   
+    is_closed = models.BooleanField(default=False, null=False) 
     title = models.CharField(max_length=200,unique=True)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -246,8 +248,8 @@ class CourseBooking(models.Model):
         max_length=20,
         choices=[
             ("pending", "รอการยืนยัน"),
-            ("confirmed", "ยืนยันแล้ว"),
-            ("canceled", "ยกเลิก"),
+            ("confirmed", "จองสำเร็จ"),
+            ("canceled", "จองไม่สำเร็จ"),
         ],
         default="pending"
     )

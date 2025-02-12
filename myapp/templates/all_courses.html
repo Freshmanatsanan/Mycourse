@@ -16,13 +16,21 @@
     <!-- Navbar -->
     {% include 'navbar.html' %}
 
+    <div class="tab-buttons">
+        <a href="{% url 'all_courses' %}" class="tab-btn active">คอร์สเรียนทั้งหมด</a>
+        <a href="{% url 'my_courses' %}" class="tab-btn">คอร์สเรียนของฉัน</a>
+    </div>
+
     <!-- Main Content -->
     <main class="courses-page">
+
+
         <div class="container">
             <h1 class="page-title">คอร์สเรียนทั้งหมด</h1>
             <div class="courses-grid">
                 {% for course in courses %}
                 <!-- คอร์สเรียนทั้งหมด -->
+                {% if not course.is_closed %} 
                 <section class="all-courses">
                     <div class="course-item">
                         <div class="course-thumbnail">
@@ -39,6 +47,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
                 </section>
                 {% empty %}

@@ -13,7 +13,12 @@
 
     <div style="height: 90px;"></div>
 
-    <h1   class="welcome1" > Welcome to I say ROAR!</h1>
+    <h1   class="welcome1" > 
+        <span class="welcome">Welcome to</span>
+        <span class="i">I</span>
+        <span class="say">say</span>
+        <span class="roar">ROAR!</span>
+    </h1>
 
     <div class="banner">
         <!-- ปุ่ม Previous -->
@@ -104,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <hr class="section-divider">
             <div class="course-list">
                 {% for course in courses %}
+                {% if not course.is_closed %} 
                 <div class="course-item">
                     <!-- ✅ คลิกที่ card เพื่อไปหน้า course_details -->
                     <a href="{% url 'course_details' course.id %}" class="course-link">
@@ -118,6 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
                 </div>
+                {% endif %}
                 {% empty %}
                 <p>ไม่มีคอร์สที่พร้อมใช้งานในขณะนี้</p>
                 {% endfor %}

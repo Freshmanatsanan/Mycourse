@@ -1,4 +1,5 @@
 .main-content {
+
     margin-top: 100px;
     margin-left: 355px; /* ระยะห่างจาก Sidebar */
 
@@ -60,7 +61,7 @@
 }
 
 .banner-table th {
-    background: linear-gradient(135deg, #FF6B6B, #FFD93D);
+    background: #E53935;
     color: white;
     padding: 12px;
     text-align: center;

@@ -1,5 +1,6 @@
 /* General Styles */
 .body-container {
+    font-family: "Mali", serif;
     background-color: #FFF7F2; /* สีพื้นหลัง */
 
     display: flex;

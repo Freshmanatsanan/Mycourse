@@ -3,6 +3,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/admin/review_booking_courses.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Mali:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+
 {% endblock %}
 
 {% block title %}ตรวจสอบคอร์สเรียนแบบจอง{% endblock %}
@@ -22,6 +24,7 @@
                     <th>ผู้สอน</th>
                     <th>สร้างเมื่อ</th>
                     <th>สถานะ</th>
+                    <th>สถานะการรับสมัคร</th>
                     <th>ช่องทางการชำระเงิน</th>
                     <th>การจัดการ</th>
                 </tr>
@@ -49,6 +52,14 @@
                         <span style="color: blue;">แก้ไขแล้วรอการตรวจสอบ</span>
                         {% else %}
                         <span style="color: gray;">สถานะไม่ทราบ</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if course.is_closed %}
+                            <span style="color: red; font-weight: bold;">ปิดรับสมัคร</span>
+                        {% else %}
+                            <span style="color: green; font-weight: bold;">เปิดรับสมัคร</span>
                         {% endif %}
                     </td>
 

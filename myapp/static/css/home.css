@@ -97,7 +97,6 @@ header {
  
 .welcome h1 {
     font-size: 29px;
-    color: #613E74;
     margin-top: 5px; 
     
 }
@@ -107,7 +106,21 @@ header {
     color: #613E74;
     margin-top: 5px;
 }
+.welcome {
+    color: #613E74; /* สีม่วง */
+}
 
+.i {
+    color: #18A9E4; /* สีน้ำเงิน */
+}
+
+.say {
+    color: #F57C00; /* สีส้ม */
+}
+
+.roar {
+    color: #B66CBF; /* สีม่วงอ่อน */
+}
 
 
 /* Main Container */

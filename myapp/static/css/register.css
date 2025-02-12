@@ -6,7 +6,7 @@
 }
 
 body {
-    font-family: 'Prompt', sans-serif;
+    font-family: "Mali", serif;
     background-color: #6E6196; /* เปลี่ยนสีพื้นหลัง */
     display: flex;
     justify-content: center;
@@ -18,6 +18,7 @@ body {
 
 /* Main Container */
 .main-container {
+    font-family: "Mali", serif;
     display: flex;
     flex-direction: row; /* จัดให้ภาพและฟอร์มอยู่ในแถวเดียวกัน */
     background: #fff;
@@ -54,6 +55,7 @@ body {
 }
 
 h2 {
+    font-family: "Mali", serif;
     font-size: 28px;
     color: #4A148C;
     margin-bottom: 20px;
@@ -61,12 +63,14 @@ h2 {
 }
 
 form {
+    font-family: "Mali", serif;
     display: flex;
     flex-direction: column;
     align-items: center; /* จัดให้อยู่ตรงกลาง */
 }
 
 input {
+    font-family: "Mali", serif;
     padding: 12px;
     margin-bottom: 15px;
     border: 1px solid #613E74;
@@ -130,6 +134,8 @@ button:hover {
     font-size: 14px;
     color: #4A148C;
     text-align: left; /* ให้ข้อความจัดอยู่ด้านซ้าย */
+    display: inline-block;
+    white-space: nowrap;
 }
 
 ul {
@@ -199,3 +205,43 @@ ul {
     width: 80%; /* ลดความกว้างให้เหมาะสม */
 
 }
+.popup-content img {
+    width: 100px;
+    margin-bottom: 10px;
+}
+.popup-container {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* ทำให้พื้นหลังมืดลง */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.popup-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    width: 300px;
+}
+
+
+    .btn-close {
+        background-color: #28a745;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 15px;
+    }
+
+    .btn-close:hover {
+        background-color: #218838;
+    }

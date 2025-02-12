@@ -1,6 +1,6 @@
 /* ✅ ตั้งค่าพื้นฐานของหน้า */
 body {
-    font-family: 'Kanit', sans-serif;
+    font-family: "Mali", serif;
     background: linear-gradient(135deg, #FCE4EC, #E1BEE7);
     margin: 0;
     display: flex;

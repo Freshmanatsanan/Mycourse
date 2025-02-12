@@ -4,15 +4,23 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <div class="sidebar">
-    <!-- Logo -->
+  
+    <div class="profile-icon">
+        <a href="{% url 'profile_instructor' %}" class="profile-link">
+            <div class="profile-img-container">
+                <img src="{{ user.profile.get_profile_picture }}" alt="Profile" class="profile-img">
+            </div>
+        </a>
+        <div class="profile-username">{{ user.username }}</div>
+    </div>
 
 
     <!-- Navigation Links -->
     <ul class="nav-links">
-        <li class="{% if request.resolver_match.url_name == 'instructor_sales' or request.resolver_match.url_name == 'booking_detail' %}active{% endif %}">
+        <li class="{% if request.resolver_match.url_name == 'instructor_sales' or request.resolver_match.url_name == 'instructor_booking_detail' %}active{% endif %}">
             <a href="{% url 'instructor_sales' %}">การขาย</a>
         </li>
-        <li class="{% if request.resolver_match.url_name == 'reservation_courses' or request.resolver_match.url_name == 'add_course'  or request.resolver_match.url_name == 'add_course_details' %}active{% endif %}">
+        <li class="{% if request.resolver_match.url_name == 'reservation_courses' or request.resolver_match.url_name == 'add_course'  or request.resolver_match.url_name == 'add_course_details' or request.resolver_match.url_name == 'edit_course' or request.resolver_match.url_name == 'edit_course_details'  %}active{% endif %}">
             <a href="{% url 'reservation_courses' %}">คอร์สเรียนแบบจอง</a>
         </li>
         <li class="{% if request.resolver_match.url_name == 'instructor_live_courses' or request.resolver_match.url_name == 'add_video_course'  or request.resolver_match.url_name == 'add_video_course_details' %}active{% endif %}">

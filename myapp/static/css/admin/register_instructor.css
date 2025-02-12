@@ -1,5 +1,6 @@
 /* ✅ ตั้งค่าพื้นฐานของฟอร์ม */
 .register-container {
+    font-family: "Mali", serif;
     width: 45%;
     margin: 100px auto;
     padding: 25px;
