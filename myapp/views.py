@@ -46,7 +46,7 @@ import datetime
 from django.utils.timezone import now
 import re
 from .serializers import BookingDetailSerializer, CourseSerializer,BookingHistorySerializer,InstructorProfileSerializer
-
+from django.contrib.auth import update_session_auth_hash
 
 
 
@@ -537,6 +537,54 @@ def user_booking_history_api(request):
     serializer = BookingHistorySerializer(bookings, many=True, context={'request': request})
 
     return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def verify_password_api(request):
+    """
+    API สำหรับตรวจสอบรหัสผ่านเก่าก่อนเปลี่ยนรหัสผ่าน
+    """
+    try:
+        # ✅ ใช้ request.data.get() แทน request.POST
+        current_password = request.data.get("current_password")  
+        
+        if not current_password:
+            return Response({"error": "❌ กรุณากรอกรหัสผ่านเดิม"}, status=400)
+
+        # ✅ ใช้ request.user เช็ค password อย่างถูกต้อง
+        if request.user.check_password(current_password):
+            return Response({"message": "✅ รหัสผ่านถูกต้อง", "can_change": True}, status=200)
+        else:
+            return Response({"error": "❌ รหัสผ่านไม่ถูกต้อง"}, status=400)
+
+    except Exception as e:
+        return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password_api(request):
+    """
+    API สำหรับเปลี่ยนรหัสผ่านใหม่
+    """
+    user = request.user
+    new_password = request.data.get('new_password')
+    confirm_new_password = request.data.get('confirm_new_password')
+
+    if not new_password or not confirm_new_password:
+        return Response({"error": "กรุณากรอกรหัสผ่านใหม่และยืนยันรหัสผ่าน"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if new_password != confirm_new_password:
+        return Response({"error": "❌ รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # ✅ ตั้งค่ารหัสผ่านใหม่
+    user.set_password(new_password)
+    user.save()
+
+    # ✅ อัปเดต session auth เพื่อป้องกันการล็อกเอาต์
+    update_session_auth_hash(request, user)
+
+    return Response({"message": "✅ เปลี่ยนรหัสผ่านสำเร็จ"}, status=status.HTTP_200_OK)
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 

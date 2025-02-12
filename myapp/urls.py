@@ -100,6 +100,8 @@ urlpatterns = [
     path('api/booking-my-courses/<int:course_id>/', views.booking_my_courses_api, name='booking_my_courses_api'),
     path('api/user-booking-history/',views.user_booking_history_api, name='user_booking_history_api'),
     path('api/instructors/', views.instructor_list_api, name='instructor_list_api'),
+    path('api/verify-password/', views.verify_password_api, name='verify_password_api'),
+    path('api/change-password/', views.change_password_api, name='change_password_api'),
 
 
 ]
