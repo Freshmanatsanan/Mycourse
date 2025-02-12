@@ -45,7 +45,8 @@ import string
 import datetime
 from django.utils.timezone import now
 import re
-from .serializers import BookingDetailSerializer
+from .serializers import BookingDetailSerializer, CourseSerializer
+
 
 
 
@@ -479,8 +480,16 @@ def api_user_bookings(request):
 def my_courses_api(request):
     """API สำหรับดึงคอร์สที่ผู้ใช้จอง"""
     bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
-    serializer = CourseBookingSerializer(bookings, many=True, context={'request': request})
-    return Response(serializer.data) 
+
+    # ✅ โหลดข้อมูลคอร์สของแต่ละการจอง
+    response_data = []
+    for booking in bookings:
+        course_data = CourseSerializer(booking.course, context={'request': request}).data
+        booking_data = CourseBookingSerializer(booking, context={'request': request}).data
+        booking_data["course"] = course_data  # ✅ ใส่ข้อมูลคอร์สเข้าไป
+        response_data.append(booking_data)
+
+    return Response(response_data)
 
 
 @api_view(['GET'])
@@ -490,18 +499,11 @@ def booking_my_courses_api(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     bookings = CourseBooking.objects.filter(course=course).order_by("-booking_date")
     serializer = BookingDetailSerializer(bookings, many=True, context={'request': request})
-    
+
     return Response({
-        "course": {
-            "id": course.id,
-            "title": course.title,
-            "description": course.description,
-            "price": course.price,
-            "image": request.build_absolute_uri(course.image.url) if course.image else None
-        },
+        "course": CourseSerializer(course, context={'request': request}).data,
         "bookings": serializer.data
     })
-
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 

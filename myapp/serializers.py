@@ -58,17 +58,26 @@ class CourseBookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = CourseBooking
         fields = '__all__' 
-        
+
+
+# ✅ Serializer สำหรับข้อมูลคอร์ส
 class CourseSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Course
-        fields = ['id', 'title', 'description', 'price', 'image']
+        fields = ['id', 'title', 'description', 'price', 'image_url']
+
+    def get_image_url(self, obj):
+        """ คืนค่า URL เต็มของรูปภาพ """
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if obj.image else None
 
 
-# ✅ **แก้ไข BookingDetailSerializer**
+# ✅ Serializer สำหรับข้อมูลการจองคอร์ส
 class BookingDetailSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email')
-    course = CourseSerializer()  # ✅ ตอนนี้มันถูกนิยามแล้ว
+    course = CourseSerializer()  # ✅ ดึงข้อมูลคอร์สทั้งหมด
 
     class Meta:
         model = CourseBooking
@@ -77,4 +86,3 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             'nickname_th', 'nickname_en', 'age', 'grade', 'parent_nickname', 
             'phone', 'line_id', 'booking_status', 'payment_slip'
         ]
-
