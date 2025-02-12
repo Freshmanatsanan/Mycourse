@@ -474,19 +474,17 @@ def api_user_bookings(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_courses_api(request):
-    """API สำหรับดึงคอร์สที่ผู้ใช้จอง"""
+    """API สำหรับดึงคอร์สที่ผู้ใช้จอง (เฉพาะของตนเอง)"""
     bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
 
-    # ✅ โหลดข้อมูลคอร์สของแต่ละการจอง
     response_data = []
     for booking in bookings:
         course_data = CourseSerializer(booking.course, context={'request': request}).data
         booking_data = CourseBookingSerializer(booking, context={'request': request}).data
-        booking_data["course"] = course_data  # ✅ ใส่ข้อมูลคอร์สเข้าไป
+        booking_data["course"] = course_data  # ✅ เพิ่มข้อมูลคอร์สเข้าไป
         response_data.append(booking_data)
 
     return Response(response_data)
@@ -495,23 +493,25 @@ def my_courses_api(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def booking_my_courses_api(request, course_id):
-    """API สำหรับดึงรายละเอียดของการจองคอร์ส"""
+    """API สำหรับดึงรายละเอียดของการจองคอร์ส (เฉพาะของตนเอง)"""
     course = get_object_or_404(Course, id=course_id)
-    bookings = CourseBooking.objects.filter(course=course).order_by("-booking_date")
-    serializer = BookingDetailSerializer(bookings, many=True, context={'request': request})
+
+    # ✅ ตรวจสอบให้แน่ใจว่าแสดงเฉพาะข้อมูลของผู้ใช้ที่ล็อกอิน
+    bookings = CourseBooking.objects.filter(course=course, user=request.user).order_by("-booking_date")
+
+    if not bookings.exists():
+        return Response({"error": "คุณไม่มีสิทธิ์ดูข้อมูลการจองนี้"}, status=403)
 
     return Response({
         "course": CourseSerializer(course, context={'request': request}).data,
-        "bookings": serializer.data
+        "bookings": BookingDetailSerializer(bookings, many=True, context={'request': request}).data
     })
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_booking_history_api(request):
-    """
-    API สำหรับดึงประวัติการจองของผู้ใช้ที่ล็อกอินอยู่
-    """
+    """API สำหรับดึงประวัติการจองของผู้ใช้ที่ล็อกอินอยู่ (เฉพาะของตนเอง)"""
     bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
     serializer = BookingHistorySerializer(bookings, many=True, context={'request': request})
 
@@ -1351,20 +1351,27 @@ def user_booking_history(request):
 
 @login_required
 def my_courses(request):
-    """ แสดงเฉพาะคอร์สที่ผู้ใช้จอง """
+    """ แสดงเฉพาะคอร์สที่ผู้ใช้คนปัจจุบันจอง """
     bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
     return render(request, 'my_courses.html', {'bookings': bookings})
 
 @login_required
 def booking_my_courses(request, course_id):
-    """ แสดงรายละเอียดข้อมูลของผู้ที่จองคอร์ส """
+    """ แสดงรายละเอียดข้อมูลของคอร์สที่ผู้ใช้คนปัจจุบันจอง """
     course = get_object_or_404(Course, id=course_id)
-    bookings = CourseBooking.objects.filter(course=course).order_by("-booking_date")
+
+    # ✅ ดึงข้อมูลการจองที่เป็นของ `request.user` เท่านั้น
+    bookings = CourseBooking.objects.filter(course=course, user=request.user).order_by("-booking_date")
+
+    # ✅ ถ้าผู้ใช้ไม่มีการจองคอร์สนี้เลย ให้แจ้งเตือนหรือแสดงเป็นหน้า error
+    if not bookings.exists():
+        return render(request, "error.html", {"message": "คุณไม่มีสิทธิ์ดูข้อมูลการจองนี้"})
 
     return render(request, "booking_my_courses.html", {
         "course": course,
         "bookings": bookings
     })
+
 
 
 
