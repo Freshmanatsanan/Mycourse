@@ -66,7 +66,7 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'description', 'price', 'image_url']
+        fields = ['id', 'title', 'description', 'price','instructor', 'image_url']
 
     def get_image_url(self, obj):
         """ คืนค่า URL เต็มของรูปภาพ """
