@@ -4,6 +4,7 @@ from .models import UserProfile  # นำเข้า Model Profile
 from .models import CourseDetails,Course, CourseBooking
 from myapp.models import CourseBooking 
 from django.utils.timezone import localtime
+from .models import InstructorProfile
 
 def get_booking_date(self, obj):
     if obj.booking_date:
@@ -124,3 +125,16 @@ class BookingHistorySerializer(serializers.ModelSerializer):
         if obj.payment_slip:
             return request.build_absolute_uri(obj.payment_slip.url)
         return None
+
+class InstructorProfileSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.SerializerMethodField()  # ทำให้ URL ของรูปถูกต้อง
+
+    class Meta:
+        model = InstructorProfile
+        fields = ['id', 'name', 'email', 'expertise', 'profile_picture']
+
+    def get_profile_picture(self, obj):
+        request = self.context.get('request')
+        if obj.profile_picture:
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None  # ถ้าไม่มีรูปภาพ

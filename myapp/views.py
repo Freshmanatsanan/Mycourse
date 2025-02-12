@@ -45,7 +45,7 @@ import string
 import datetime
 from django.utils.timezone import now
 import re
-from .serializers import BookingDetailSerializer, CourseSerializer,BookingHistorySerializer
+from .serializers import BookingDetailSerializer, CourseSerializer,BookingHistorySerializer,InstructorProfileSerializer
 
 
 
@@ -148,6 +148,27 @@ def staff_list_api(request):
     ]
 
     return JsonResponse(staff_data, safe=False)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])  # ✅ API ใช้ได้เฉพาะผู้ที่ล็อกอิน
+def instructor_list_api(request):
+    """
+    API สำหรับดึงข้อมูลอาจารย์ทั้งหมด (เฉพาะที่ใช้ใน Mobile)
+    """
+    instructors = InstructorProfile.objects.select_related('user').all()
+    
+    instructor_data = [
+        {
+            "id": instructor.id,
+            "full_name": f"{instructor.user.first_name} {instructor.user.last_name}",
+            "age": instructor.age,
+            "subject": instructor.subject,
+            "profile_picture": request.build_absolute_uri(instructor.profile_picture.url) if instructor.profile_picture else None,
+        }
+        for instructor in instructors
+    ]
+    
+    return JsonResponse(instructor_data, safe=False)
 
 
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------

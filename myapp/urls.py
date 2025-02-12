@@ -99,6 +99,7 @@ urlpatterns = [
     path('api/my-courses/', views.my_courses_api, name='my_courses_api'),
     path('api/booking-my-courses/<int:course_id>/', views.booking_my_courses_api, name='booking_my_courses_api'),
     path('api/user-booking-history/',views.user_booking_history_api, name='user_booking_history_api'),
+    path('api/instructors/', views.instructor_list_api, name='instructor_list_api'),
 
 
 ]
