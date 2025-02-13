@@ -505,7 +505,7 @@ def add_banner_api(request):
 def list_banners_api(request):
     """✅ API สำหรับดึง Banner ทั้งหมดของผู้สอนคนนั้น"""
     banners = Banner.objects.filter(instructor=request.user)
-    serializer = BannerSerializer(banners, many=True)
+    serializer = BannerSerializer(banners, many=True, context={"request": request})
     return Response(serializer.data)
 
 
