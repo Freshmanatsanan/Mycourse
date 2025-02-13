@@ -392,7 +392,9 @@ def instructor_sales_api(request):
                     "course_id": course.id,
                     "course_name": course.title if course.title else "N/A",
                     "booking_count": course.booking_count,
-                    "course_image": request.build_absolute_uri(course.image.url) if course.image else None,
+                    "course_image": request.build_absolute_uri(course.image.url)
+                    if course.image and hasattr(course.image, "url")
+                    else None,  
                     "details": {
                         "course_title": course_details_dict[course.id].name if course.id in course_details_dict else "N/A",
                         "course_description": course_details_dict[course.id].description if course.id in course_details_dict else "N/A",
