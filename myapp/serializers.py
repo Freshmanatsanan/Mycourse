@@ -138,3 +138,20 @@ class InstructorProfileSerializer(serializers.ModelSerializer):
         if obj.profile_picture:
             return request.build_absolute_uri(obj.profile_picture.url)
         return None  # ถ้าไม่มีรูปภาพ
+    
+class InstructorProfileSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    profile_picture = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InstructorProfile
+        fields = ['id', 'full_name', 'email', 'phone', 'age', 'subject', 'profile_picture']
+
+    def get_full_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}"
+
+    def get_profile_picture(self, obj):
+        request = self.context.get('request')
+        if obj.profile_picture:
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None

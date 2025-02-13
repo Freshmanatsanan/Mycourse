@@ -47,6 +47,8 @@ from django.utils.timezone import now
 import re
 from .serializers import BookingDetailSerializer, CourseSerializer,BookingHistorySerializer,InstructorProfileSerializer
 from django.contrib.auth import update_session_auth_hash
+from django.core.files.base import ContentFile
+import base64
 
 
 
@@ -171,7 +173,11 @@ def instructor_list_api(request):
     return JsonResponse(instructor_data, safe=False)
 
 
+
 #-----------------------------------------------------------------สำหรับ API ------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#---------------------------------------------api สมาชิก --------------------------------------------------------
+
 #ใช้เพื่อตรวจสอบ token ของฝั่ง mobile เเละดึงข้อมูลผู้ใช้งาน
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -311,6 +317,56 @@ def banners_api(request):
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
 #---------------------------------------------api สมาชิก --------------------------------------------------------
+
+
+#---------------------------------------------api ผู้สอน --------------------------------------------------------
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def instructor_profile_api(request):
+    """
+    API สำหรับดึงข้อมูลโปรไฟล์ของ Instructor
+    """
+    user = request.user
+    profile = user.profile
+    data = {
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "profile_picture": request.build_absolute_uri(profile.profile_picture.url) if profile.profile_picture else None
+        
+    }
+    return Response(data, status=status.HTTP_200_OK)
+
+    
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_instructor_profile_api(request):
+    """
+    API สำหรับอัปเดตข้อมูลโปรไฟล์ของ Instructor
+    """
+    user = request.user
+    profile = user.profile
+
+    user.username = request.data.get('username', user.username)
+    user.first_name = request.data.get('first_name', user.first_name)
+    user.last_name = request.data.get('last_name', user.last_name)
+    user.email = request.data.get('email', user.email)
+    
+    if 'profile_picture' in request.FILES:
+        if profile.profile_picture:
+            profile.profile_picture.delete()  # ลบไฟล์รูปเก่าก่อนอัปโหลดใหม่
+        profile.profile_picture = request.FILES['profile_picture']
+
+    user.save()
+    profile.save()
+
+    return Response({"message": "อัปเดตโปรไฟล์สำเร็จ"}, status=status.HTTP_200_OK)
+
+
+#---------------------------------------------api ผู้สอน --------------------------------------------------------
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
