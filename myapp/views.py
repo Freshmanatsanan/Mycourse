@@ -475,6 +475,14 @@ def instructor_booking_detail_api(request, course_id):
     except Exception as e:
         return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
     
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_banner_api(request, banner_id):
+    """✅ API สำหรับลบแบนเนอร์ของผู้สอน"""
+    banner = get_object_or_404(Banner, id=banner_id, instructor=request.user)
+
+    banner.delete()
+    return Response({"message": "✅ ลบแบนเนอร์สำเร็จ!"}, status=status.HTTP_200_OK)
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

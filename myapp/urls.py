@@ -113,6 +113,8 @@ urlpatterns = [
     path('api/banners/pending/', views.list_pending_banners_api, name="list_pending_banners_api"),
     path('api/banners/<int:banner_id>/approve/', views.approve_banner_api, name="approve_banner_api"),
     path('api/banners/<int:banner_id>/reject/', views.reject_banner_api, name="reject_banner_api"),
+    path('api/banners/<int:banner_id>/delete/', views.delete_banner_api, name="delete_banner_api"),
+
 
 
 ]
