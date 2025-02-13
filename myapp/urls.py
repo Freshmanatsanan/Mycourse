@@ -104,6 +104,8 @@ urlpatterns = [
     path('api/change-password/', views.change_password_api, name='change_password_api'),
     path('api/instructor-profile/', views.instructor_profile_api, name='instructor_profile_api'),
     path('api/update-instructor-profile/', views.update_instructor_profile_api, name='update_instructor_profile_api'),
+    path('api/profile-admin/', views.profile_admin_api, name='profile_admin_api'),
+    path('api/update-profile-admin/', views.update_profile_admin_api, name='update_profile_admin_api'),
 
 
 ]
