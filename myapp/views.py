@@ -364,6 +364,117 @@ def update_instructor_profile_api(request):
 
     return Response({"message": "อัปเดตโปรไฟล์สำเร็จ"}, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def instructor_sales_api(request):
+    """
+    API สำหรับดึงข้อมูลการขายของ Instructor ให้ตรงกับเว็บ
+    """
+    try:
+        active_tab = request.GET.get("type", "booking")
+
+        # ✅ คอร์สที่มีการจอง (รวมจำนวนการจอง)
+        booked_courses = Course.objects.filter(
+            id__in=CourseBooking.objects.values("course_id")
+        ).annotate(booking_count=Count("coursebooking"))
+
+        # ✅ หา CourseDetails ที่เกี่ยวข้อง
+        course_details_dict = {cd.course_id: cd for cd in CourseDetails.objects.filter(course__in=booked_courses)}
+
+        # ✅ คอร์สวิดีโอที่มีการซื้อ (รวมจำนวนการซื้อ)
+        purchased_courses = CourseOrder.objects.values("course_name").annotate(purchase_count=Count("id"))
+
+        # ✅ จัดรูปแบบข้อมูลก่อนส่งกลับ
+        data = {
+            "active_tab": active_tab,
+            "booked_courses": [
+                {
+                    "course_id": course.id,
+                    "course_name": course.title if course.title else "N/A",
+                    "booking_count": course.booking_count,
+                    "course_image": request.build_absolute_uri(course.image.url) if course.image else None,
+                    "details": {
+                        "course_title": course_details_dict[course.id].name if course.id in course_details_dict else "N/A",
+                        "course_description": course_details_dict[course.id].description if course.id in course_details_dict else "N/A",
+                        "course_price": float(course.price) if course.price else 0.0,
+                    }
+                }
+                for course in booked_courses
+            ],
+            "purchased_courses": [
+                {
+                    "course_name": purchase["course_name"],
+                    "purchase_count": purchase["purchase_count"]
+                }
+                for purchase in purchased_courses
+            ]
+        }
+
+        return Response(data, status=200)
+
+    except Exception as e:
+        return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def instructor_booking_detail_api(request, course_id):
+    """
+    API สำหรับดึงรายละเอียดการจองหลักสูตรของ Instructor
+    """
+    try:
+        # ✅ ดึง Course จาก `course_id`
+        course = get_object_or_404(Course, id=course_id)
+
+        search_query = request.GET.get("search", "")
+
+        # ✅ ดึงข้อมูลการจองจาก `CourseBooking`
+        bookings = CourseBooking.objects.select_related("user").filter(course=course).order_by("-booking_date")
+
+        if search_query:
+            bookings = bookings.filter(student_name__icontains=search_query)  # ✅ ค้นหาจากชื่อผู้เรียน
+
+        paginator = Paginator(bookings, 10)
+        page_number = request.GET.get("page")
+        bookings_page = paginator.get_page(page_number)
+
+        # ✅ จัดรูปแบบข้อมูล
+        data = {
+            "course": {
+                "id": course.id,
+                "title": course.title,
+            },
+            "bookings": [
+                {
+                    "student_name_th": booking.student_name,
+                    "student_name_en": booking.student_name_en,
+                    "nickname_th": booking.nickname_th,
+                    "nickname_en": booking.nickname_en,
+                    "age": booking.age,
+                    "grade": booking.grade,
+                    "parent_nickname": booking.parent_nickname,
+                    "phone": booking.phone,
+                    "line_id": booking.line_id if booking.line_id else "ไม่มี",
+                    "email": booking.user.email if booking.user else "ไม่มีข้อมูล",
+                    "selected_course": booking.selected_course,
+                    "payment_slip": request.build_absolute_uri(booking.payment_slip.url) if booking.payment_slip else None,
+                    "booking_status": booking.get_booking_status_display(),
+                    "booking_date": booking.booking_date.strftime('%Y-%m-%d %H:%M:%S'),
+                }
+                for booking in bookings_page
+            ],
+            "pagination": {
+                "current_page": bookings_page.number,
+                "total_pages": bookings_page.paginator.num_pages,
+                "has_next": bookings_page.has_next(),
+                "has_previous": bookings_page.has_previous(),
+            }
+        }
+
+        return Response(data, status=200)
+
+    except Exception as e:
+        return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
+
 
 #---------------------------------------------api ผู้สอน --------------------------------------------------------
 
@@ -412,6 +523,7 @@ def update_profile_admin_api(request):
     profile.save()
 
     return Response({"message": "อัปเดตโปรไฟล์สำเร็จ"}, status=status.HTTP_200_OK)
+
 #---------------------------------------------api แอดมิน --------------------------------------------------------
 
 
@@ -1695,6 +1807,8 @@ def cancel_booking(request, booking_id):
         messages.error(request, "⚠ ไม่สามารถยกเลิกได้ เนื่องจากการจองนี้ได้รับการยืนยันแล้ว")
 
     return redirect("my_courses")
+
+
 @login_required
 @instructor_required
 def close_course(request, course_id):
