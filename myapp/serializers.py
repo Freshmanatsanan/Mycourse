@@ -6,6 +6,7 @@ from myapp.models import CourseBooking
 from django.utils.timezone import localtime
 from .models import InstructorProfile
 from .models import Banner
+from django.conf import settings
 
 def get_booking_date(self, obj):
     if obj.booking_date:
@@ -165,5 +166,6 @@ class BannerSerializer(serializers.ModelSerializer):
     
 
     def get_image_url(self, obj):
-        request = self.context.get("request")
-        return request.build_absolute_uri(obj.image.url) if obj.image else None
+        if obj.image:
+            return f"{settings.MEDIA_URL}{obj.image}"
+        return None
