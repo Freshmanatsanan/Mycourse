@@ -506,7 +506,7 @@ def list_banners_api(request):
     """✅ API สำหรับดึง Banner ทั้งหมดของผู้สอนคนนั้น"""
     banners = Banner.objects.filter(instructor=request.user)
     serializer = BannerSerializer(banners, many=True, context={"request": request})
-    return Response(serializer.data)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

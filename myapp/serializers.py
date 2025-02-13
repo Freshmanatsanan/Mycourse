@@ -160,12 +160,14 @@ class InstructorProfileSerializer(serializers.ModelSerializer):
     
 
 class BannerSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()  # ✅ ฟิลด์ใหม่สำหรับ URL เต็ม
+
     class Meta:
         model = Banner
-        fields = ['id', 'image', 'status', 'rejection_message', 'created_at']
-    
+        fields = ["id", "image_url", "created_at", "status", "rejection_message"]
 
     def get_image_url(self, obj):
+        request = self.context.get("request")
         if obj.image:
-            return f"{settings.MEDIA_URL}{obj.image}"
+            return request.build_absolute_uri(obj.image.url)  # ✅ ส่ง URL เต็ม
         return None
