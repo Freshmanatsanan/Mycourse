@@ -5,6 +5,7 @@ from .models import CourseDetails,Course, CourseBooking
 from myapp.models import CourseBooking 
 from django.utils.timezone import localtime
 from .models import InstructorProfile
+from .models import Banner
 
 def get_booking_date(self, obj):
     if obj.booking_date:
@@ -155,3 +156,9 @@ class InstructorProfileSerializer(serializers.ModelSerializer):
         if obj.profile_picture:
             return request.build_absolute_uri(obj.profile_picture.url)
         return None
+    
+
+class BannerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Banner
+        fields = ['id', 'image', 'status', 'rejection_message', 'created_at']

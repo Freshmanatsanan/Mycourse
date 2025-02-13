@@ -24,7 +24,7 @@ from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.urls import reverse
 from .decorators import admin_required  , instructor_required  # นำเข้า Decorator
 from django.contrib.auth.models import User, Group  # นำเข้า Group
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 from .models import InstructorProfile
@@ -35,7 +35,7 @@ from django.core.files.storage import FileSystemStorage
 from .models import CourseBooking
 from django.db.models import Count
 from django.core.paginator import Paginator
-from .serializers import CourseDetailsSerializer, AddCourseSerializer 
+from .serializers import CourseDetailsSerializer, AddCourseSerializer ,BannerSerializer
 from myapp.serializers import CourseBookingSerializer
 from django.contrib import messages
 from django.core.mail import send_mail
@@ -474,6 +474,69 @@ def instructor_booking_detail_api(request, course_id):
 
     except Exception as e:
         return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
+    
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def add_banner_api(request):
+    """✅ API สำหรับเพิ่ม Banner ใหม่"""
+    image = request.FILES.get("banner_image")
+    if not image:
+        return Response({"error": "กรุณาอัปโหลดรูปภาพ"}, status=status.HTTP_400_BAD_REQUEST)
+
+    banner = Banner.objects.create(
+        instructor=request.user,
+        image=image,
+        status="pending"
+    )
+    return Response({"message": "✅ เพิ่มเบนเนอร์สำเร็จ! โปรดรอการอนุมัติจากแอดมิน"}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_banners_api(request):
+    """✅ API สำหรับดึง Banner ทั้งหมดของผู้สอนคนนั้น"""
+    banners = Banner.objects.filter(instructor=request.user)
+    serializer = BannerSerializer(banners, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAdminUser])
+def list_pending_banners_api(request):
+    """✅ API สำหรับดึงเฉพาะ Banner ที่รอการอนุมัติ (Admin)"""
+    banners = Banner.objects.filter(status="pending")
+    serializer = BannerSerializer(banners, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def approve_banner_api(request, banner_id):
+    """✅ API สำหรับอนุมัติ Banner (Admin)"""
+    banner = get_object_or_404(Banner, id=banner_id)
+    banner.status = "approved"
+    banner.rejection_message = ""
+    banner.save()
+    return Response({"message": "✅ อนุมัติโฆษณาสำเร็จ!"}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def reject_banner_api(request, banner_id):
+    """✅ API สำหรับปฏิเสธ Banner (Admin)"""
+    try:
+        data = json.loads(request.body)
+        rejection_message = data.get("rejection_message", "")
+
+        banner = get_object_or_404(Banner, id=banner_id)
+        banner.status = "rejected"
+        banner.rejection_message = rejection_message
+        banner.save()
+
+        return Response({"message": "⛔ ปฏิเสธโฆษณาสำเร็จ!"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 #---------------------------------------------api ผู้สอน --------------------------------------------------------
