@@ -171,3 +171,18 @@ class BannerSerializer(serializers.ModelSerializer):
         if obj.image:
             return request.build_absolute_uri(obj.image.url)  # ✅ ส่ง URL เต็ม
         return None
+    
+class CourseSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Course
+        fields = ['id', 'title', 'price', 'instructor', 'created_at', 'status', 'image_url']
+
+    def get_image_url(self, obj):
+        """
+        ✅ ใช้ URL เต็มสำหรับรูปภาพ
+        """
+        if obj.image:
+            return self.context['request'].build_absolute_uri(obj.image.url)
+        return None

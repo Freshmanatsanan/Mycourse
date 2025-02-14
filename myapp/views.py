@@ -547,6 +547,131 @@ def reject_banner_api(request, banner_id):
         return Response({"message": "⛔ ปฏิเสธโฆษณาสำเร็จ!"}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_reservation_courses_api(request):
+    """
+    ✅ API ดึงข้อมูลคอร์สเรียนแบบจอง พร้อมแสดงข้อความที่แอดมินส่งกลับมา (revision_message)
+    """
+    try:
+        courses = Course.objects.all()
+        courses_data = []
+
+        for course in courses:
+            courses_data.append({
+                'id': course.id,
+                'title': course.title,
+                'price': str(course.price),
+                'instructor': course.instructor,
+                'created_at': course.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'status': course.status,
+                'revision_message': course.revision_message if course.status == 'revision' else None,  # ✅ เพิ่มข้อความที่แอดมินส่งกลับมา
+                'image_url': request.build_absolute_uri(course.image.url) if course.image else None,  # ✅ แสดง URL รูปภาพ
+                'is_closed': course.is_closed,
+            })
+
+        return Response(courses_data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_course_api(request):
+    """✅ API สำหรับเพิ่มคอร์สเรียนใหม่"""
+    try:
+        title = request.data.get('title')
+        description = request.data.get('description')
+        instructor = request.user  # ใช้ผู้ใช้ที่ล็อกอินเป็น Instructor
+        price = request.data.get('price')
+        image = request.FILES.get('image')
+
+        if not title or not description or not price:
+            return Response({'error': 'กรุณากรอกข้อมูลให้ครบถ้วน'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # บันทึกคอร์สลงฐานข้อมูล
+        course = Course.objects.create(
+            title=title,
+            description=description,
+            instructor=instructor,
+            price=price,
+            image=image
+        )
+
+        return Response({'message': '✅ เพิ่มคอร์สสำเร็จ!', 'course_id': course.id}, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_course_details_api(request, course_id):
+    """✅ API สำหรับเพิ่มรายละเอียดคอร์ส"""
+    try:
+        course = get_object_or_404(Course, id=course_id)
+
+        name = request.data.get('name')
+        description = request.data.get('description')
+        additional_description = request.data.get('additional_description')
+        image = request.FILES.get('image')
+        additional_image = request.FILES.get('additional_image')
+        extra_image_1 = request.FILES.get('extra_image_1')
+        extra_image_2 = request.FILES.get('extra_image_2')
+
+        if not name or not description:
+            return Response({'error': 'กรุณากรอกข้อมูลให้ครบถ้วน'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # บันทึกข้อมูลรายละเอียดคอร์ส
+        course_details = CourseDetails.objects.create(
+            course=course,
+            name=name,
+            description=description,
+            additional_description=additional_description,
+            image=image,
+            additional_image=additional_image,
+            extra_image_1=extra_image_1,
+            extra_image_2=extra_image_2,
+        )
+
+        return Response({'message': '✅ เพิ่มรายละเอียดคอร์สสำเร็จ!'}, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_course_api(request, course_id):
+    """✅ API สำหรับแก้ไขคอร์ส"""
+    try:
+        course = get_object_or_404(Course, id=course_id, instructor=request.user)
+
+        course.title = request.data.get('title', course.title)
+        course.description = request.data.get('description', course.description)
+        course.price = request.data.get('price', course.price)
+        if 'image' in request.FILES:
+            course.image = request.FILES['image']
+        course.save()
+
+        return Response({'message': '✅ แก้ไขคอร์สสำเร็จ!'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def submit_course_review_api(request, course_id):
+    """✅ API สำหรับส่งคอร์สให้แอดมินตรวจสอบ"""
+    try:
+        course = get_object_or_404(Course, id=course_id, instructor=request.user)
+        course.status = 'pending'  # ตั้งสถานะเป็นรออนุมัติ
+        course.save()
+
+        return Response({'message': '✅ ส่งคอร์สให้แอดมินตรวจสอบแล้ว!'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
 
 
 #---------------------------------------------api ผู้สอน --------------------------------------------------------
