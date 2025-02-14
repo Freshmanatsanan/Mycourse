@@ -128,6 +128,8 @@ urlpatterns = [
 
     # ✅ API สำหรับส่งคอร์สให้แอดมินตรวจสอบ
     path('api/submit-course-review/<int:course_id>/', views.submit_course_review_api, name='submit_course_review_api'),
+    path('api/delete-course/<int:course_id>/', views.delete_course_api, name='delete_course_api'),
+    path('api/delete-multiple-courses/', views.delete_multiple_courses_api, name='delete_multiple_courses_api'),
 
 
 
