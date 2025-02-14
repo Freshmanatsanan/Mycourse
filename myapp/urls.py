@@ -131,6 +131,11 @@ urlpatterns = [
     path('api/delete-course/<int:course_id>/', views.delete_course_api, name='delete_course_api'),
     path('api/delete-multiple-courses/', views.delete_multiple_courses_api, name='delete_multiple_courses_api'),
 
+    path('api/close-course/<int:course_id>/', views.close_course_api, name='close_course_api'),
+    path('api/reopen-course/<int:course_id>/', views.reopen_course_api, name='reopen_course_api'),
+
+
+
 
 
 ]

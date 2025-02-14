@@ -703,6 +703,35 @@ def delete_multiple_courses_api(request):
     return Response({"message": f"✅ ลบคอร์สสำเร็จ {deleted_count} รายการ"}, status=status.HTTP_204_NO_CONTENT)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def close_course_api(request, course_id):
+    """
+    ✅ API สำหรับปิดการรับสมัครคอร์ส
+    """
+    try:
+        course = get_object_or_404(Course, id=course_id)
+        course.is_closed = True
+        course.save()
+        return Response({"message": "✅ สิ้นสุดการรับสมัครของคอร์สเรียบร้อยแล้ว"}, status=status.HTTP_200_OK)
+    except Course.DoesNotExist:
+        return Response({"error": "❌ ไม่พบคอร์สที่ต้องการปิดรับสมัคร"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reopen_course_api(request, course_id):
+    """
+    ✅ API สำหรับเปิดรับสมัครคอร์สอีกครั้ง
+    """
+    try:
+        course = get_object_or_404(Course, id=course_id)
+        course.is_closed = False
+        course.save()
+        return Response({"message": "✅ เปิดรับสมัครของคอร์สนี้อีกครั้งเรียบร้อยแล้ว"}, status=status.HTTP_200_OK)
+    except Course.DoesNotExist:
+        return Response({"error": "❌ ไม่พบคอร์สที่ต้องการเปิดรับสมัคร"}, status=status.HTTP_404_NOT_FOUND)
+
+
 
 
 #---------------------------------------------api ผู้สอน --------------------------------------------------------
