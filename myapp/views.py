@@ -581,18 +581,20 @@ def list_reservation_courses_api(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_course_api(request):
-    """✅ API สำหรับเพิ่มคอร์สเรียนใหม่"""
+    """
+    ✅ API สำหรับเพิ่มคอร์สเรียน
+    """
     try:
         title = request.data.get('title')
         description = request.data.get('description')
-        instructor = request.user  # ใช้ผู้ใช้ที่ล็อกอินเป็น Instructor
+        instructor = request.data.get('instructor')
         price = request.data.get('price')
         image = request.FILES.get('image')
 
-        if not title or not description or not price:
-            return Response({'error': 'กรุณากรอกข้อมูลให้ครบถ้วน'}, status=status.HTTP_400_BAD_REQUEST)
+        # ตรวจสอบว่าข้อมูลครบถ้วน
+        if not title or not description or not instructor or not price:
+            return Response({"error": "กรุณากรอกข้อมูลให้ครบทุกช่อง"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # บันทึกคอร์สลงฐานข้อมูล
         course = Course.objects.create(
             title=title,
             description=description,
@@ -600,15 +602,17 @@ def add_course_api(request):
             price=price,
             image=image
         )
+        return Response({"message": "✅ เพิ่มคอร์สเรียนสำเร็จ!", "course_id": course.id}, status=status.HTTP_201_CREATED)
 
-        return Response({'message': '✅ เพิ่มคอร์สสำเร็จ!', 'course_id': course.id}, status=status.HTTP_201_CREATED)
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_course_details_api(request, course_id):
-    """✅ API สำหรับเพิ่มรายละเอียดคอร์ส"""
+    """
+    ✅ API สำหรับเพิ่มรายละเอียดคอร์ส
+    """
     try:
         course = get_object_or_404(Course, id=course_id)
 
@@ -620,10 +624,9 @@ def add_course_details_api(request, course_id):
         extra_image_1 = request.FILES.get('extra_image_1')
         extra_image_2 = request.FILES.get('extra_image_2')
 
-        if not name or not description:
-            return Response({'error': 'กรุณากรอกข้อมูลให้ครบถ้วน'}, status=status.HTTP_400_BAD_REQUEST)
+        if not name or not description or not additional_description:
+            return Response({"error": "กรุณากรอกข้อมูลให้ครบทุกช่อง"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # บันทึกข้อมูลรายละเอียดคอร์ส
         course_details = CourseDetails.objects.create(
             course=course,
             name=name,
@@ -632,12 +635,12 @@ def add_course_details_api(request, course_id):
             image=image,
             additional_image=additional_image,
             extra_image_1=extra_image_1,
-            extra_image_2=extra_image_2,
+            extra_image_2=extra_image_2
         )
+        return Response({"message": "✅ เพิ่มรายละเอียดคอร์สสำเร็จ!"}, status=status.HTTP_201_CREATED)
 
-        return Response({'message': '✅ เพิ่มรายละเอียดคอร์สสำเร็จ!'}, status=status.HTTP_201_CREATED)
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
