@@ -683,43 +683,63 @@ def edit_course_api(request, course_id):
 
 @api_view(['GET', 'PUT', 'POST'])  # ✅ เพิ่ม GET Method
 @permission_classes([IsAuthenticated])
-def edit_course_details_api(request, course_id):
+def add_course_details_api(request, course_id):
     """
-    ✅ API สำหรับแก้ไขรายละเอียดคอร์สเรียน
+    ✅ API สำหรับเพิ่มรายละเอียดคอร์ส พร้อมตรวจสอบไฟล์ภาพและแปลง URL ของภาพเป็น URL เต็ม
     """
-    course_details = get_object_or_404(CourseDetails, course__id=course_id, course__added_by=request.user)
+    try:
+        course = get_object_or_404(Course, id=course_id)
 
-    if request.method == 'GET':  # ✅ เพิ่มการดึงข้อมูล
+        name = request.data.get('name')
+        description = request.data.get('description')
+        additional_description = request.data.get('additional_description')
+        image = request.FILES.get('image')
+        additional_image = request.FILES.get('additional_image')
+        extra_image_1 = request.FILES.get('extra_image_1')
+        extra_image_2 = request.FILES.get('extra_image_2')
+
+        if not name or not description or not additional_description:
+            return Response({"error": "❌ กรุณากรอกข้อมูลให้ครบทุกช่อง"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ ตรวจสอบไฟล์รูปภาพ
+        allowed_types = ["image/jpeg", "image/png"]
+        for img in [image, additional_image, extra_image_1, extra_image_2]:
+            if img and img.content_type not in allowed_types:
+                return Response({"error": f"❌ ไฟล์ {img.name} ต้องเป็นรูปภาพ JPEG หรือ PNG เท่านั้น"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ บันทึกข้อมูล
+        course_details = CourseDetails.objects.create(
+            course=course,
+            name=name,
+            description=description,
+            additional_description=additional_description,
+            image=image,
+            additional_image=additional_image,
+            extra_image_1=extra_image_1,
+            extra_image_2=extra_image_2
+        )
+
+        # ✅ ฟังก์ชันช่วยสร้าง URL เต็ม
+        def build_full_url(image_field):
+            return request.build_absolute_uri(image_field.url) if image_field and hasattr(image_field, 'url') else None
+
         return Response({
-            "name": course_details.name,
-            "description": course_details.description,
-            "additional_description": course_details.additional_description,
-            "image": course_details.image.url if course_details.image else None,
-            "additional_image": course_details.additional_image.url if course_details.additional_image else None,
-            "extra_image_1": course_details.extra_image_1.url if course_details.extra_image_1 else None,
-            "extra_image_2": course_details.extra_image_2.url if course_details.extra_image_2 else None,
-        }, status=status.HTTP_200_OK)
+            "message": "✅ เพิ่มรายละเอียดคอร์สสำเร็จ!",
+            "course_details": {
+                "name": course_details.name,
+                "description": course_details.description,
+                "additional_description": course_details.additional_description,
+                "image": build_full_url(course_details.image),
+                "additional_image": build_full_url(course_details.additional_image),
+                "extra_image_1": build_full_url(course_details.extra_image_1),
+                "extra_image_2": build_full_url(course_details.extra_image_2),
+            }
+        }, status=status.HTTP_201_CREATED)
 
-    if request.method in ['PUT', 'POST']:  # ✅ PUT/POST สำหรับการแก้ไข
-        course_details.name = request.data.get('name', course_details.name)
-        course_details.description = request.data.get('description', course_details.description)
-        course_details.additional_description = request.data.get('additional_description', course_details.additional_description)
-
-        if 'image' in request.FILES:
-            course_details.image = request.FILES['image']
-        if 'additional_image' in request.FILES:
-            course_details.additional_image = request.FILES['additional_image']
-        if 'extra_image_1' in request.FILES:
-            course_details.extra_image_1 = request.FILES['extra_image_1']
-        if 'extra_image_2' in request.FILES:
-            course_details.extra_image_2 = request.FILES['extra_image_2']
-
-        course_details.save()
-        return Response({
-            "message": "✅ แก้ไขรายละเอียดคอร์สสำเร็จ และส่งไปตรวจสอบ!",
-            "course_id": course_details.course.id
-        }, status=status.HTTP_200_OK)
-
+    except ValidationError as ve:
+        return Response({"error": f"❌ ข้อผิดพลาดในการตรวจสอบข้อมูล: {str(ve)}"}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({"error": f"❌ เกิดข้อผิดพลาด: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #@api_view(['PUT', 'POST']) 
 #@permission_classes([IsAuthenticated])
