@@ -124,6 +124,7 @@ urlpatterns = [
 
     # ✅ API สำหรับแก้ไขคอร์ส
     path('api/edit-course/<int:course_id>/', views.edit_course_api, name='edit_course_api'),
+    path('api/edit-course-details/<int:course_id>/', views.edit_course_details_api, name='edit_course_details_api'),
 
     # ✅ API สำหรับส่งคอร์สให้แอดมินตรวจสอบ
     path('api/submit-course-review/<int:course_id>/', views.submit_course_review_api, name='submit_course_review_api'),

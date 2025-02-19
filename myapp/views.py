@@ -642,24 +642,62 @@ def add_course_details_api(request, course_id):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
+    
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def edit_course_api(request, course_id):
-    """✅ API สำหรับแก้ไขคอร์ส"""
-    try:
-        course = get_object_or_404(Course, id=course_id, instructor=request.user)
+    """
+    ✅ API สำหรับแก้ไขคอร์สเรียน
+    """
+    course = get_object_or_404(Course, id=course_id, added_by=request.user)
 
-        course.title = request.data.get('title', course.title)
-        course.description = request.data.get('description', course.description)
-        course.price = request.data.get('price', course.price)
-        if 'image' in request.FILES:
-            course.image = request.FILES['image']
-        course.save()
+    # อัปเดตค่าที่ได้รับจาก request
+    course.title = request.data.get('title', course.title)
+    course.description = request.data.get('description', course.description)
+    course.instructor = request.data.get('instructor', course.instructor)
+    course.price = request.data.get('price', course.price)
 
-        return Response({'message': '✅ แก้ไขคอร์สสำเร็จ!'}, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # อัปเดตรูปภาพถ้ามีการอัปโหลดใหม่
+    if 'image' in request.FILES:
+        course.image = request.FILES['image']
+
+    course.save()
+
+    return Response({
+        "message": "✅ แก้ไขคอร์สเรียนสำเร็จ!",
+        "course_id": course.id
+    }, status=status.HTTP_200_OK)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def edit_course_details_api(request, course_id):
+    """
+    ✅ API สำหรับแก้ไขรายละเอียดคอร์สเรียน
+    """
+    course_details = get_object_or_404(CourseDetails, course__id=course_id, course__added_by=request.user)
+    course = course_details.course
+
+    # อัปเดตค่าที่ได้รับจาก request
+    course_details.name = request.data.get('name', course_details.name)
+    course_details.description = request.data.get('description', course_details.description)
+    course_details.additional_description = request.data.get('additional_description', course_details.additional_description)
+
+    # อัปเดตรูปภาพถ้ามีการอัปโหลดใหม่
+    if 'image' in request.FILES:
+        course_details.image = request.FILES['image']
+    if 'additional_image' in request.FILES:
+        course_details.additional_image = request.FILES['additional_image']
+
+    # อัปเดตสถานะคอร์สเป็น "แก้ไขแล้วรอการตรวจสอบ"
+    course.status = 'revised'
+    course.save()
+    course_details.save()
+
+    return Response({
+        "message": "✅ แก้ไขรายละเอียดคอร์สสำเร็จ และส่งไปตรวจสอบ!",
+        "course_id": course.id
+    }, status=status.HTTP_200_OK)
+
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
