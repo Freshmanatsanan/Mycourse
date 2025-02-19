@@ -49,6 +49,7 @@ from .serializers import BookingDetailSerializer, CourseSerializer,BookingHistor
 from django.contrib.auth import update_session_auth_hash
 from django.core.files.base import ContentFile
 import base64
+from django.core.exceptions import ValidationError
 
 
 
@@ -651,22 +652,44 @@ def edit_course_api(request, course_id):
     """
     course = get_object_or_404(Course, id=course_id, added_by=request.user)
 
-    # อัปเดตค่าที่ได้รับจาก request
-    course.title = request.data.get('title', course.title)
-    course.description = request.data.get('description', course.description)
-    course.instructor = request.data.get('instructor', course.instructor)
-    course.price = request.data.get('price', course.price)
+    try:
+        # ตรวจสอบว่ามีข้อมูลที่ต้องแก้ไข
+        title = request.data.get('title', course.title)
+        description = request.data.get('description', course.description)
+        instructor = request.data.get('instructor', course.instructor)
+        price = request.data.get('price', course.price)
 
-    # อัปเดตรูปภาพถ้ามีการอัปโหลดใหม่
-    if 'image' in request.FILES:
-        course.image = request.FILES['image']
+        # ตรวจสอบว่าราคาถูกต้อง (ต้องเป็นตัวเลข)
+        try:
+            price = float(price)
+            if price < 0:
+                return Response({"error": "ราคาไม่สามารถติดลบได้"}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+            return Response({"error": "กรุณาระบุราคาที่ถูกต้อง"}, status=status.HTTP_400_BAD_REQUEST)
 
-    course.save()
+        # อัปเดตข้อมูลคอร์ส
+        course.title = title
+        course.description = description
+        course.instructor = instructor
+        course.price = price
 
-    return Response({
-        "message": "✅ แก้ไขคอร์สเรียนสำเร็จ!",
-        "course_id": course.id
-    }, status=status.HTTP_200_OK)
+        # อัปเดตรูปภาพถ้ามีการอัปโหลดใหม่
+        if 'image' in request.FILES:
+            course.image = request.FILES['image']
+
+        course.save()
+
+        return Response({
+            "message": "✅ แก้ไขคอร์สเรียนสำเร็จ!",
+            "course_id": course.id
+        }, status=status.HTTP_200_OK)
+
+    except ValidationError as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
