@@ -681,7 +681,7 @@ def edit_course_api(request, course_id):
     except Exception as e:
         return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['PUT'])
+@api_view(['PUT', 'POST']) 
 @permission_classes([IsAuthenticated])
 def edit_course_details_api(request, course_id):
     """
