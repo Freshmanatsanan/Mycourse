@@ -697,7 +697,6 @@ def edit_course_details_api(request, course_id):
         "message": "✅ แก้ไขรายละเอียดคอร์สสำเร็จ และส่งไปตรวจสอบ!",
         "course_id": course.id
     }, status=status.HTTP_200_OK)
-
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
