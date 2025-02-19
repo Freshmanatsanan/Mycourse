@@ -653,25 +653,19 @@ def edit_course_api(request, course_id):
     course = get_object_or_404(Course, id=course_id, added_by=request.user)
 
     try:
-        # ตรวจสอบว่ามีข้อมูลที่ต้องแก้ไข
-        title = request.data.get('title', course.title)
-        description = request.data.get('description', course.description)
-        instructor = request.data.get('instructor', course.instructor)
-        price = request.data.get('price', course.price)
+        # อัปเดตข้อมูลคอร์ส
+        course.title = request.data.get('title', course.title)
+        course.description = request.data.get('description', course.description)
+        course.instructor = request.data.get('instructor', course.instructor)
+        course.price = request.data.get('price', course.price)
 
-        # ตรวจสอบว่าราคาถูกต้อง (ต้องเป็นตัวเลข)
+        # ตรวจสอบว่าราคาถูกต้อง
         try:
-            price = float(price)
+            price = float(course.price)
             if price < 0:
                 return Response({"error": "ราคาไม่สามารถติดลบได้"}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError:
             return Response({"error": "กรุณาระบุราคาที่ถูกต้อง"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # อัปเดตข้อมูลคอร์ส
-        course.title = title
-        course.description = description
-        course.instructor = instructor
-        course.price = price
 
         # อัปเดตรูปภาพถ้ามีการอัปโหลดใหม่
         if 'image' in request.FILES:
@@ -684,12 +678,8 @@ def edit_course_api(request, course_id):
             "course_id": course.id
         }, status=status.HTTP_200_OK)
 
-    except ValidationError as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
     except Exception as e:
         return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
