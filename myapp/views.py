@@ -689,7 +689,7 @@ def delete_course_api(request, course_id):
 
     # ลบคอร์ส
     course.delete()
-    return Response({"message": "✅ ลบคอร์สสำเร็จ!"}, status=status.HTTP_204_NO_CONTENT)
+    return Response({"message": "✅ ลบคอร์สสำเร็จ!"},status=status.HTTP_200_OK)  
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
