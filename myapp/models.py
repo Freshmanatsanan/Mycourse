@@ -22,7 +22,7 @@ class Course(models.Model):
     revision_message = models.TextField(blank=True, null=True)  # เพิ่มฟิลด์นี้
     created_at = models.DateTimeField(auto_now_add=True) 
     payment_qr = models.ImageField(upload_to='payment_qrs/', blank=True, null=True)
-
+    added_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     def __str__(self):
         return self.title
     

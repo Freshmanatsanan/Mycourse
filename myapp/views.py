@@ -600,7 +600,8 @@ def add_course_api(request):
             description=description,
             instructor=instructor,
             price=price,
-            image=image
+            image=image,
+            added_by=request.user  # ✅ บันทึก ID ผู้ที่เพิ่มคอร์ส
         )
         return Response({"message": "✅ เพิ่มคอร์สเรียนสำเร็จ!", "course_id": course.id}, status=status.HTTP_201_CREATED)
 
@@ -677,34 +678,18 @@ def submit_course_review_api(request, course_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_course_api(request, course_id):
-    """✅ API สำหรับลบคอร์สเดี่ยว"""
-    course = get_object_or_404(Course, id=course_id)
+    """✅ API สำหรับลบคอร์สเดี่ยว (Mobile)"""
+    course = get_object_or_404(Course, id=course_id,)
+    print(f"📌 Added_by (ID ผู้เพิ่มคอร์ส): {course.added_by_id}")
+    print(f"📌 User ID ที่ล็อกอิน: {request.user.id}")
 
-    if course.instructor != request.user.username:
+    # ✅ ตรวจสอบสิทธิ์โดยใช้ ID
+    if course.added_by_id != request.user.id:
         return Response({"error": "คุณไม่มีสิทธิ์ลบคอร์สนี้"}, status=status.HTTP_403_FORBIDDEN)
 
+    # ลบคอร์ส
     course.delete()
     return Response({"message": "✅ ลบคอร์สสำเร็จ!"}, status=status.HTTP_204_NO_CONTENT)
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def delete_multiple_courses_api(request):
-    """✅ API สำหรับลบคอร์สหลายรายการ"""
-    course_ids = request.data.get("course_ids", [])
-
-    if not course_ids:
-        return Response({"error": "กรุณาระบุรายการคอร์สที่ต้องการลบ"}, status=status.HTTP_400_BAD_REQUEST)
-
-    courses = Course.objects.filter(id__in=course_ids, instructor=request.user.username)
-    
-    if not courses.exists():
-        return Response({"error": "ไม่พบคอร์สที่คุณมีสิทธิ์ลบ"}, status=status.HTTP_404_NOT_FOUND)
-
-    deleted_count = courses.count()
-    courses.delete()
-
-    return Response({"message": f"✅ ลบคอร์สสำเร็จ {deleted_count} รายการ"}, status=status.HTTP_204_NO_CONTENT)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
