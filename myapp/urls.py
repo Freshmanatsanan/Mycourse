@@ -115,8 +115,8 @@ urlpatterns = [
     path('api/banners/<int:banner_id>/reject/', views.reject_banner_api, name="reject_banner_api"),
     path('api/banners/<int:banner_id>/delete/', views.delete_banner_api, name="delete_banner_api"),
         # ✅ API สำหรับเพิ่มคอร์สใหม่
-    path('courses/add/', views.add_course_api, name='add_course_api'),
-    path('courses/<int:course_id>/details/', views.add_course_details_api, name='add_course_details_api'),
+    path('api/add-course/', views.add_course_api, name='add_course_api'),
+    path('api/add-course-details/<int:course_id>/', views.add_course_details_api, name='add_course_details_api'),
 
 
     # ✅ API สำหรับดึงรายการคอร์สทั้งหมดของ Instructor
