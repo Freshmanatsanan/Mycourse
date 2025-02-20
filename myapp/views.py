@@ -974,6 +974,43 @@ def Admin_booking_detail_api(request, course_id):
 
     except Exception as e:
         return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def user_list_api(request):
+    """
+    ✅ API สำหรับดึงข้อมูลสมาชิกและผู้สอน
+    """
+    # ✅ ดึงข้อมูลสมาชิกทั่วไป (ที่ไม่มี InstructorProfile)
+    members = User.objects.filter(instructor_profile__isnull=True).values(
+        "id", "first_name", "last_name", "email"
+    )
+
+    # ✅ ดึงข้อมูลผู้สอน พร้อมรายละเอียดเพิ่มเติม
+    instructors = InstructorProfile.objects.select_related("user").all()
+    instructor_data = [
+        {
+            "id": instructor.user.id,
+            "first_name": instructor.user.first_name,
+            "last_name": instructor.user.last_name,
+            "email": instructor.user.email,
+            "subject": instructor.subject,
+            "phone": instructor.phone,
+            "profile_picture": instructor.profile_picture.url if instructor.profile_picture else None,
+        }
+        for instructor in instructors
+    ]
+
+    return Response(
+        {
+            "members": list(members),
+            "instructors": instructor_data,
+        },
+        status=200,
+    )
+
 #---------------------------------------------api แอดมิน --------------------------------------------------------
 
 
@@ -1656,10 +1693,7 @@ def user_list(request):
         'instructors': instructors
     })
 
-    return render(request, "admin/users_teachers.html", {
-        "instructors": instructors,
-        "members": members  # ✅ ต้องมี members ส่งไปที่ template
-    })
+
 
 def add_staff(request, user_id):  # รับ user_id เป็นพารามิเตอร์
     """ เพิ่มโปรไฟล์ผู้สอน """

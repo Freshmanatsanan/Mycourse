@@ -137,6 +137,7 @@ urlpatterns = [
 
     path("api/sales/", views.sales_api, name="sales_api"), 
     path("api/Admin-booking-detail-api/<int:course_id>/", views.Admin_booking_detail_api, name="Admin_booking_detail_api"), 
+    path("api/users/", views.user_list_api, name="user_list_api"),
 
 
 
