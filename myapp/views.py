@@ -50,6 +50,9 @@ from django.contrib.auth import update_session_auth_hash
 from django.core.files.base import ContentFile
 import base64
 from django.core.exceptions import ValidationError
+from rest_framework.status import HTTP_201_CREATED, HTTP_400_BAD_REQUEST
+from django.contrib.auth.hashers import make_password
+from myapp.models import InstructorProfile  # ✅ ตรวจสอบให้แน่ใจว่า import ถูกต้อง
 
 
 
@@ -1010,6 +1013,60 @@ def user_list_api(request):
         },
         status=200,
     )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])  # ✅ อนุญาตให้ทุกคนเรียกใช้ API นี้
+def register_instructor_api(request):
+    """
+    ✅ API สำหรับลงทะเบียนผู้สอน
+    """
+    data = request.data
+    username = data.get("username")
+    first_name = data.get("first_name")
+    last_name = data.get("last_name")
+    email = data.get("email")
+    phone = data.get("phone")
+    age = data.get("age")
+    subject = data.get("subject")
+    password = data.get("password")
+    password2 = data.get("password2")
+    profile_picture = request.FILES.get("profile_picture")
+
+    # ✅ ตรวจสอบว่ารหัสผ่านตรงกันหรือไม่
+    if password != password2:
+        return Response({"error": "รหัสผ่านไม่ตรงกัน"}, status=HTTP_400_BAD_REQUEST)
+
+    # ✅ ตรวจสอบว่าชื่อผู้ใช้หรืออีเมลถูกใช้ไปแล้วหรือไม่
+    if User.objects.filter(username=username).exists():
+        return Response({"error": "ชื่อผู้ใช้นี้มีอยู่แล้ว"}, status=HTTP_400_BAD_REQUEST)
+    
+    if User.objects.filter(email=email).exists():
+        return Response({"error": "อีเมลนี้ถูกใช้ไปแล้ว"}, status=HTTP_400_BAD_REQUEST)
+
+    # ✅ สร้าง User ใหม่
+    user = User.objects.create(
+        username=username,
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        password=make_password(password),  # 🔹 เข้ารหัสรหัสผ่านก่อนบันทึก
+    )
+
+    # ✅ ตรวจสอบและเพิ่มผู้ใช้ไปยังกลุ่ม "Instructor"
+    instructor_group, created = Group.objects.get_or_create(name="Instructor")
+    user.groups.add(instructor_group)
+
+    # ✅ สร้าง InstructorProfile
+    instructor_profile = InstructorProfile.objects.create(
+        user=user,
+        profile_picture=profile_picture,
+        phone=phone,
+        age=age,
+        subject=subject,
+    )
+
+    return Response({"message": "ลงทะเบียนผู้สอนสำเร็จ"}, status=HTTP_201_CREATED)
 
 #---------------------------------------------api แอดมิน --------------------------------------------------------
 
