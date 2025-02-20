@@ -912,6 +912,68 @@ def sales_api(request):
 
     except Exception as e:
         return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
+    
+
+   
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def Admin_booking_detail_api(request, course_id):
+    """
+    API สำหรับดึงรายละเอียดการจองหลักสูตรของ Instructor
+    """
+    try:
+        # ✅ ดึง Course จาก `course_id`
+        course = get_object_or_404(Course, id=course_id)
+
+        search_query = request.GET.get("search", "")
+
+        # ✅ ดึงข้อมูลการจองจาก `CourseBooking`
+        bookings = CourseBooking.objects.select_related("user").filter(course=course).order_by("-booking_date")
+
+        if search_query:
+            bookings = bookings.filter(student_name__icontains=search_query)  # ✅ ค้นหาจากชื่อผู้เรียน
+
+        paginator = Paginator(bookings, 10)
+        page_number = request.GET.get("page")
+        bookings_page = paginator.get_page(page_number)
+
+        # ✅ จัดรูปแบบข้อมูล
+        data = {
+            "course": {
+                "id": course.id,
+                "title": course.title,
+            },
+            "bookings": [
+                {
+                    "student_name_th": booking.student_name,
+                    "student_name_en": booking.student_name_en,
+                    "nickname_th": booking.nickname_th,
+                    "nickname_en": booking.nickname_en,
+                    "age": booking.age,
+                    "grade": booking.grade,
+                    "parent_nickname": booking.parent_nickname,
+                    "phone": booking.phone,
+                    "line_id": booking.line_id if booking.line_id else "ไม่มี",
+                    "email": booking.user.email if booking.user else "ไม่มีข้อมูล",
+                    "selected_course": booking.selected_course,
+                    "payment_slip": request.build_absolute_uri(booking.payment_slip.url) if booking.payment_slip else None,
+                    "booking_status": booking.get_booking_status_display(),
+                    "booking_date": booking.booking_date.strftime('%Y-%m-%d %H:%M:%S'),
+                }
+                for booking in bookings_page
+            ],
+            "pagination": {
+                "current_page": bookings_page.number,
+                "total_pages": bookings_page.paginator.num_pages,
+                "has_next": bookings_page.has_next(),
+                "has_previous": bookings_page.has_previous(),
+            }
+        }
+
+        return Response(data, status=200)
+
+    except Exception as e:
+        return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
 #---------------------------------------------api แอดมิน --------------------------------------------------------
 
 
