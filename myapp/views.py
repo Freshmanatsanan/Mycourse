@@ -986,7 +986,8 @@ def user_list_api(request):
     """
     ✅ API สำหรับดึงข้อมูลสมาชิกและผู้สอน
     """
-    domain = request.build_absolute_uri('/')
+    domain = request.build_absolute_uri('/')[:-1]  # ✅ ตัด `/` ท้าย URL ออก
+    print(f"🌐 Domain: {domain}")
     # ✅ ดึงข้อมูลสมาชิกทั่วไป (ที่ไม่มี InstructorProfile)
     members = User.objects.filter(instructor_profile__isnull=True).values(
         "id", "first_name", "last_name", "email"
@@ -1006,6 +1007,7 @@ def user_list_api(request):
         }
         for instructor in instructors
     ]
+    print("👨‍🏫 Instructor Data:", instructor_data)
 
     return Response(
         {
