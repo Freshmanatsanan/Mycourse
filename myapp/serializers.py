@@ -179,6 +179,8 @@ class CourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = ['id', 'title', 'price', 'instructor', 'created_at', 'status', 'image_url']
 
+    
+
     def get_image_url(self, obj):
         """
         ✅ ใช้ URL เต็มสำหรับรูปภาพ

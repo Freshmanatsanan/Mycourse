@@ -142,6 +142,12 @@ urlpatterns = [
     path("api/banners_pending/", views.banners_admin_api, name="banners_admin_api"),
     path("api/Admin_banners/approve/<int:banner_id>/", views.Admin_approve_banner_api, name="approve_banner_api"),
     path("api/Admin_banners/reject/<int:banner_id>/", views.Admin_reject_banner_api, name="reject_banner_api"),
+    path("api/review_booking_courses/", views.api_review_booking_courses, name="api_review_booking_courses"),
+    path("api/approve_course/<int:course_id>/", views.api_approve_course, name="api_approve_course"),
+    path("api/send_back_course/<int:course_id>/", views.api_send_back_course, name="api_send_back_course"),
+    path("api/upload_payment_qr/<int:course_id>/", views.api_upload_payment_qr, name="api_upload_payment_qr"),
+
+
 
 
 

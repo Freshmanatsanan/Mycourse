@@ -1119,6 +1119,69 @@ def Admin_reject_banner_api(request, banner_id):
         return Response({"message": "⛔ ปฏิเสธโฆษณาสำเร็จ!"}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])  # ต้องล็อกอินเพื่อใช้งาน API
+def api_upload_payment_qr(request, course_id):
+    """
+    ✅ API สำหรับอัปโหลด QR Code การชำระเงิน
+    """
+    course = get_object_or_404(Course, id=course_id)
+
+    if "payment_qr" not in request.FILES:
+        return Response({"error": "⚠️ กรุณาอัปโหลดไฟล์ QR Code"}, status=status.HTTP_400_BAD_REQUEST)
+
+    payment_qr = request.FILES["payment_qr"]
+    fs = FileSystemStorage()
+    filename = fs.save(payment_qr.name, payment_qr)
+
+    # ✅ บันทึกไฟล์ลงฐานข้อมูล
+    course.payment_qr = filename
+    course.save()
+
+    return Response({"message": "✅ อัปโหลด QR Code สำเร็จแล้ว!"}, status=status.HTTP_200_OK)
+
+# ✅ API ดึงคอร์สที่รออนุมัติ (pending, revised)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_review_booking_courses(request):
+    courses = Course.objects.filter(status__in=['pending', 'revised'])
+    serializer = CourseSerializer(courses, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# ✅ API อนุมัติคอร์ส (Admin Only)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_approve_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    if not course.payment_qr:
+        return Response({"error": "❌ กรุณาอัปโหลด QR Code ก่อนอนุมัติ"}, status=status.HTTP_400_BAD_REQUEST)
+
+    course.status = 'approved'
+    course.save()
+    
+    return Response({"message": "✅ อนุมัติคอร์สเรียนสำเร็จ!"}, status=status.HTTP_200_OK)
+
+
+# ✅ API ส่งคอร์สกลับไปแก้ไข (Admin Only)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_send_back_course(request, course_id):
+    try:
+        data = request.data
+        revision_message = data.get("revision_message", "")
+
+        course = get_object_or_404(Course, id=course_id)
+        course.status = 'revision'
+        course.revision_message = revision_message
+        course.save()
+
+        return Response({"message": "⛔ ส่งคอร์สกลับไปแก้ไขสำเร็จ!"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 #---------------------------------------------api แอดมิน --------------------------------------------------------
 
 
