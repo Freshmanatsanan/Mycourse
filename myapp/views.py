@@ -986,6 +986,7 @@ def user_list_api(request):
     """
     ✅ API สำหรับดึงข้อมูลสมาชิกและผู้สอน
     """
+    domain = request.build_absolute_uri('/')
     # ✅ ดึงข้อมูลสมาชิกทั่วไป (ที่ไม่มี InstructorProfile)
     members = User.objects.filter(instructor_profile__isnull=True).values(
         "id", "first_name", "last_name", "email"
@@ -1001,7 +1002,7 @@ def user_list_api(request):
             "email": instructor.user.email,
             "subject": instructor.subject,
             "phone": instructor.phone,
-            "profile_picture": instructor.profile_picture.url if instructor.profile_picture else None,
+            "profile_picture": f"{domain}{instructor.profile_picture.url}" if instructor.profile_picture else None,
         }
         for instructor in instructors
     ]
