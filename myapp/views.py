@@ -53,7 +53,9 @@ from django.core.exceptions import ValidationError
 from rest_framework.status import HTTP_201_CREATED, HTTP_400_BAD_REQUEST
 from django.contrib.auth.hashers import make_password
 from myapp.models import InstructorProfile  # ✅ ตรวจสอบให้แน่ใจว่า import ถูกต้อง
-
+# ✅ โค้ดใหม่ (ใช้ urllib.parse แทน)
+from urllib.parse import quote 
+from urllib.parse import quote
 
 
 def register(request):
@@ -295,6 +297,7 @@ def get_approved_courses(request):
                 'title': course.title,
                 'price': course.price,
                 'image_url': request.build_absolute_uri(course.image.url) if course.image else None,  # ใช้ URL เต็ม
+                
                 'instructor': course.instructor,
             })
         return Response(courses_data, status=status.HTTP_200_OK)
@@ -1071,6 +1074,51 @@ def register_instructor_api(request):
 
     return Response({"message": "ลงทะเบียนผู้สอนสำเร็จ"}, status=HTTP_201_CREATED)
 
+
+
+# ✅ API ดึงแบนเนอร์ที่รออนุมัติ (Admin Only)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def banners_admin_api(request):
+    banners = Banner.objects.filter(status="pending")
+    banners_data = [
+        {
+            'id': banner.id,
+            'image_url': request.build_absolute_uri(banner.image.url) if banner.image else None,
+            'created_at': banner.created_at.strftime('%d/%m/%Y %H:%M')
+        }
+        for banner in banners
+    ]
+    return Response(banners_data, status=status.HTTP_200_OK)
+
+
+# ✅ API อนุมัติแบนเนอร์ (Admin Only)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated]) 
+def Admin_approve_banner_api(request, banner_id):
+    banner = get_object_or_404(Banner, id=banner_id)
+    banner.status = "approved"
+    banner.rejection_message = ""
+    banner.save()
+    return Response({"message": "✅ อนุมัติโฆษณาสำเร็จ!"}, status=status.HTTP_200_OK)
+
+
+# ✅ API ปฏิเสธแบนเนอร์ (Admin Only)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated]) 
+def Admin_reject_banner_api(request, banner_id):
+    try:
+        data = json.loads(request.body)
+        rejection_message = data.get("rejection_message", "")
+
+        banner = get_object_or_404(Banner, id=banner_id)
+        banner.status = "rejected"
+        banner.rejection_message = rejection_message
+        banner.save()
+
+        return Response({"message": "⛔ ปฏิเสธโฆษณาสำเร็จ!"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 #---------------------------------------------api แอดมิน --------------------------------------------------------
 
 
