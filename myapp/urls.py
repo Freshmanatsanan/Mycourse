@@ -146,6 +146,8 @@ urlpatterns = [
     path("api/approve_course/<int:course_id>/", views.api_approve_course, name="api_approve_course"),
     path("api/send_back_course/<int:course_id>/", views.api_send_back_course, name="api_send_back_course"),
     path("api/upload_payment_qr/<int:course_id>/", views.api_upload_payment_qr, name="api_upload_payment_qr"),
+    path("api/booking/<int:booking_id>/update-status/", views.update_booking_status_api, name="update_booking_status_api"),
+
 
 
 

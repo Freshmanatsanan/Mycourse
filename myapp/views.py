@@ -56,7 +56,15 @@ from myapp.models import InstructorProfile  # ✅ ตรวจสอบให้
 # ✅ โค้ดใหม่ (ใช้ urllib.parse แทน)
 from urllib.parse import quote 
 from urllib.parse import quote
-
+from django.db.models import Sum
+from django.utils.timezone import now
+from datetime import datetime, timedelta
+import plotly.graph_objs as go
+import plotly.offline as opy
+from django.shortcuts import render
+from django.db.models import Sum, Count
+from datetime import datetime
+from .models import CourseBooking, CourseOrder, Course
 
 def register(request):
     if request.method == 'POST':    
@@ -1182,6 +1190,32 @@ def api_send_back_course(request, course_id):
         return Response({"message": "⛔ ส่งคอร์สกลับไปแก้ไขสำเร็จ!"}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])  # ต้องล็อกอินก่อนใช้งาน API
+def update_booking_status_api(request, booking_id):
+    """
+    อัปเดตสถานะการจองของผู้ใช้ (ใช้สำหรับโมบาย)
+    """
+    booking = get_object_or_404(CourseBooking, id=booking_id)
+
+    # ✅ ตรวจสอบค่า 'status' ที่ถูกส่งมาจาก Request
+    new_status = request.data.get("status")
+    if new_status not in ["confirmed", "rejected"]:
+        return Response({"error": "สถานะไม่ถูกต้อง"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # ✅ อัปเดตสถานะการจอง
+    booking.booking_status = new_status
+    booking.save()
+
+    # ✅ ส่งข้อความแจ้งเตือน
+    messages.success(request, f"อัปเดตสถานะเป็น {booking.get_booking_status_display()} สำเร็จ!")
+
+    return Response(
+        {"message": f"อัปเดตสถานะเป็น {booking.get_booking_status_display()} สำเร็จ!"},
+        status=status.HTTP_200_OK
+    )
 #---------------------------------------------api แอดมิน --------------------------------------------------------
 
 
@@ -1600,11 +1634,224 @@ def send_back_course(request, course_id):
         # กรณี GET method
         return HttpResponseRedirect(reverse('review_booking_courses'))
     
-@login_required
-@admin_required
-def admin_dashboard(request):
 
-    return render(request, 'admin/dashboard_admin.html')
+from django.db.models import Case, When, Count, Sum, DecimalField, OuterRef, Subquery, Value, F
+
+def generate_graphs(booking_income_query, video_income_query):
+    """ ฟังก์ชันสร้างกราฟรายได้ตามคอร์สและรายได้แยกตามเดือน """
+
+    # ✅ **สร้างกราฟรายได้ตามคอร์ส**
+    course_names = []
+    course_earnings = []
+
+    # ✅ ดึงรายได้จากคอร์สจอง
+    course_booking_totals = (
+        CourseBooking.objects.filter(booking_status="confirmed")
+        .values('course__title')
+        .annotate(total_income=Sum('course__price'))
+    )
+
+    for booking in course_booking_totals:
+        course_names.append(booking['course__title'])
+        course_earnings.append(booking['total_income'])
+
+    # ✅ ดึงรายได้จากคอร์สวิดีโอ โดยคำนวณแยกเพื่อป้องกันการซ้อน Aggregate Functions
+    video_courses = VideoCourse.objects.values_list('name', 'price')  # ดึงชื่อคอร์สวิดีโอและราคา
+    video_prices = {name: price for name, price in video_courses}  # แปลงเป็น Dictionary
+
+    course_video_totals = (
+        CourseOrder.objects.filter(status="paid")
+        .values('course_name')
+        .annotate(total_count=Count('course_name'))  # นับจำนวนที่ถูกซื้อ
+    )
+
+    for order in course_video_totals:
+        course_name = order['course_name']
+        total_students = order['total_count']
+        total_income = video_prices.get(course_name, 0) * total_students  # คำนวณรายได้รวม
+
+        course_names.append(course_name)
+        course_earnings.append(total_income)
+
+    # ✅ สร้างกราฟแท่งแสดงรายได้แต่ละคอร์ส
+    course_chart = go.Bar(
+        x=course_names,
+        y=course_earnings,
+        marker=dict(color="#1E3A8A"),
+        name="รายได้แต่ละคอร์ส",
+        hoverinfo="x+y",
+        text=course_earnings,
+        textposition="outside",
+        textfont=dict(size=14, color="black")
+    )
+
+    layout = go.Layout(
+        title=dict(
+            text="รายได้จากแต่ละคอร์ส",
+            font=dict(size=18, color="#4A5568"),
+            x=0.5
+        ),
+        xaxis=dict(
+            title="ชื่อคอร์ส",
+            tickangle=-20,
+            showgrid=True,
+        ),
+        yaxis=dict(
+            title="รายได้รวม (บาท)",
+            gridcolor="#E2E8F0"
+        ),
+        height=500,
+        margin=dict(t=50, b=100)
+    )
+
+    fig_course = go.Figure(data=[course_chart], layout=layout)
+    graph_course_div = opy.plot(fig_course, auto_open=False, output_type="div")
+
+    # ✅ **สร้างกราฟรายได้แยกตามเดือน**
+    thai_months = [
+        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+    ]
+
+    monthly_income = []
+    month_labels = []
+
+    for month in range(1, 13):
+        monthly_booking = CourseBooking.objects.filter(
+            booking_status="confirmed",
+            booking_date__month=month
+        ).aggregate(total=Sum('course__price'))['total'] or 0
+
+        monthly_video = sum(
+            video_prices.get(order.course_name, 0) * order.total_count
+            for order in CourseOrder.objects.filter(status="paid", order_date__month=month)
+            .values('course_name')
+            .annotate(total_count=Count('course_name'))
+        )
+
+        monthly_total = monthly_booking + monthly_video
+        monthly_income.append(monthly_total)
+        month_labels.append(thai_months[month - 1])
+
+    monthly_chart = go.Bar(
+        x=month_labels,
+        y=monthly_income,
+        marker=dict(color="#10B981"),
+        name="รายได้แต่ละเดือน",
+        hoverinfo="x+y",
+        text=monthly_income,
+        textposition="outside",
+        textfont=dict(size=12, color="black")
+    )
+
+    layout_monthly = go.Layout(
+        title=dict(text="รายได้แยกตามเดือน", font=dict(size=18, color="#4A5568"), x=0.5),
+        xaxis=dict(title="เดือน", showgrid=False),
+        yaxis=dict(title="รายได้รวม (บาท)", gridcolor="#E2E8F0"),
+        height=500,
+        margin=dict(t=50, b=100)
+    )
+
+    fig_monthly = go.Figure(data=[monthly_chart], layout=layout_monthly)
+    graph_monthly_div = opy.plot(fig_monthly, auto_open=False, output_type="div")
+
+    return graph_course_div, graph_monthly_div
+
+
+def admin_dashboard(request):
+    filter_type = request.GET.get("filter", "all")
+    course_type = request.GET.get("course_type", "all")
+
+    today = datetime.today().date()
+
+    # ✅ **ดึงค่ารายได้รวมทั้งหมด (ไม่ใช้ฟิลเตอร์)**
+    total_booking_courses = CourseBooking.objects.filter(booking_status="confirmed").count()
+    total_video_courses = CourseOrder.objects.filter(status="paid").count()
+    total_income = (
+        CourseBooking.objects.filter(booking_status="confirmed").aggregate(total=Sum('course__price'))['total'] or 0
+    ) + (
+        sum(VideoCourse.objects.filter(name=order.course_name).first().price or 0
+            for order in CourseOrder.objects.filter(status="paid"))
+    )
+    booking_income = CourseBooking.objects.filter(booking_status="confirmed").aggregate(total=Sum('course__price'))['total'] or 0
+    video_income = sum(
+        VideoCourse.objects.filter(name=order.course_name).first().price or 0
+        for order in CourseOrder.objects.filter(status="paid")
+    )
+
+    # ✅ **ฟิลเตอร์ข้อมูลตามที่เลือก (ใช้กับตารางและกราฟเท่านั้น)**
+    booking_income_query = CourseBooking.objects.filter(booking_status="confirmed")
+    video_income_query = CourseOrder.objects.filter(status="paid")
+
+    if course_type == "video":
+        booking_income_query = CourseBooking.objects.none()
+    elif course_type == "booking":
+        video_income_query = CourseOrder.objects.none()
+
+    if filter_type == "daily":
+        booking_income_query = booking_income_query.filter(booking_date=today)
+        video_income_query = video_income_query.filter(order_date=today)
+    elif filter_type == "monthly":
+        booking_income_query = booking_income_query.filter(booking_date__month=today.month)
+        video_income_query = video_income_query.filter(order_date__month=today.month)
+
+    # ✅ **ดึงข้อมูลคอร์สและคำนวณรายได้ (ใช้กับกราฟและตาราง)**
+    course_revenues = []
+    course_names = []
+    course_earnings = []
+
+    if course_type in ["all", "booking"]:
+        courses = Course.objects.all()
+        for course in courses:
+            course_booking_income = CourseBooking.objects.filter(course=course, booking_status="confirmed").aggregate(total=Sum('course__price'))['total'] or 0
+            total_students_in_course = CourseBooking.objects.filter(course=course, booking_status="confirmed").count()
+
+            course_revenues.append({
+                "title": course.title,
+                "type": "คอร์สจอง",
+                "total_students": total_students_in_course,
+                "revenue": course_booking_income
+            })
+
+            course_names.append(course.title)
+            course_earnings.append(course_booking_income)
+
+    if course_type in ["all", "video"]:
+        video_courses = VideoCourse.objects.all()
+        for course in video_courses:
+            course_video_income = sum(
+                order.price for order in CourseOrder.objects.filter(course_name=course.name, status="paid")
+            )
+            total_students_in_course = CourseOrder.objects.filter(course_name=course.name, status="paid").count()
+
+            course_revenues.append({
+                "title": course.name,
+                "type": "คอร์สวิดีโอ",
+                "total_students": total_students_in_course,
+                "revenue": course_video_income
+            })
+
+            course_names.append(course.name)
+            course_earnings.append(course_video_income)
+
+    # ✅ **สร้างกราฟ**
+    graph_course_div, graph_monthly_div = generate_graphs(booking_income_query, video_income_query)
+
+    context = {
+        "total_income": total_income,
+        "video_income": video_income,
+        "booking_income": booking_income,
+        "total_booking_courses": total_booking_courses,
+        "total_video_courses": total_video_courses,
+        "course_revenues": course_revenues,
+        "filter_type": filter_type,
+        "course_type": course_type,
+        "graph_course_div": graph_course_div,
+        "graph_monthly_div": graph_monthly_div,
+    }
+    return render(request, "admin/dashboard_admin.html", context)
+
+
 
 
 @login_required
