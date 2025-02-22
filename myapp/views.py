@@ -959,6 +959,7 @@ def Admin_booking_detail_api(request, course_id):
             },
             "bookings": [
                 {
+                    "id": booking.id,
                     "student_name_th": booking.student_name,
                     "student_name_en": booking.student_name_en,
                     "nickname_th": booking.nickname_th,
