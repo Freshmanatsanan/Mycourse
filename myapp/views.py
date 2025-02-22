@@ -1217,6 +1217,168 @@ def update_booking_status_api(request, booking_id):
         {"message": f"อัปเดตสถานะเป็น {booking.get_booking_status_display()} สำเร็จ!"},
         status=status.HTTP_200_OK
     )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])  # ✅ ต้องล็อกอินก่อนใช้งาน
+def admin_dashboard_api(request):
+    """ API ดึงข้อมูลรายได้รวมสำหรับ Mobile """
+
+    today = datetime.today().date()
+
+    # ✅ คำนวณรายได้รวมทั้งหมด
+    total_booking_courses = CourseBooking.objects.filter(booking_status="confirmed").count()
+    total_video_courses = CourseOrder.objects.filter(status="paid").count()
+    
+    total_income = (
+        CourseBooking.objects.filter(booking_status="confirmed").aggregate(total=Sum('course__price'))['total'] or 0
+    ) + (
+        sum(VideoCourse.objects.filter(name=order.course_name).first().price or 0
+            for order in CourseOrder.objects.filter(status="paid"))
+    )
+
+    booking_income = CourseBooking.objects.filter(booking_status="confirmed").aggregate(total=Sum('course__price'))['total'] or 0
+    video_income = sum(
+        VideoCourse.objects.filter(name=order.course_name).first().price or 0
+        for order in CourseOrder.objects.filter(status="paid")
+    )
+
+    # ✅ ดึงรายได้จากคอร์สจอง
+    course_revenues = []
+    courses = CourseBooking.objects.filter(booking_status="confirmed").values('course__title').annotate(
+        total_income=Sum('course__price'), total_students=Count('id')
+    )
+
+    for course in courses:
+        course_revenues.append({
+            "title": course['course__title'],
+            "type": "คอร์สจอง",
+            "total_students": course['total_students'],
+            "revenue": course['total_income']
+        })
+
+    # ✅ ดึงรายได้จากคอร์สวิดีโอ
+    video_courses = VideoCourse.objects.values_list('name', 'price')
+    video_prices = {name: price for name, price in video_courses}
+
+    video_revenues = CourseOrder.objects.filter(status="paid").values('course_name').annotate(
+        total_students=Count('course_name')
+    )
+
+    for course in video_revenues:
+        course_revenues.append({
+            "title": course['course_name'],
+            "type": "คอร์สวิดีโอ",
+            "total_students": course['total_students'],
+            "revenue": video_prices.get(course['course_name'], 0) * course['total_students']
+        })
+
+    # ✅ ดึงรายได้แยกตามเดือน
+    monthly_income = []
+    thai_months = [
+        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+    ]
+
+    for month in range(1, 13):
+        monthly_booking = CourseBooking.objects.filter(
+            booking_status="confirmed",
+            booking_date__month=month
+        ).aggregate(total=Sum('course__price'))['total'] or 0
+
+        monthly_video = sum(
+            video_prices.get(order.course_name, 0) * order.total_students
+            for order in CourseOrder.objects.filter(status="paid", order_date__month=month)
+            .values('course_name')
+            .annotate(total_students=Count('course_name'))
+        )
+
+        monthly_total = monthly_booking + monthly_video
+        monthly_income.append({
+            "month": thai_months[month - 1],
+            "total_income": monthly_total
+        })
+
+    return Response({
+        "total_income": total_income,
+        "booking_income": booking_income,
+        "video_income": video_income,
+        "total_booking_courses": total_booking_courses,
+        "total_video_courses": total_video_courses,
+        "course_revenues": course_revenues,
+        "monthly_income": monthly_income,
+    })
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def course_revenue_api(request):
+    """ API ดึงข้อมูลรายได้จากคอร์สทั้งหมด """
+
+    course_revenues = []
+    courses = CourseBooking.objects.filter(booking_status="confirmed").values('course__title').annotate(
+        total_income=Sum('course__price'), total_students=Count('id')
+    )
+
+    for course in courses:
+        course_revenues.append({
+            "title": course['course__title'],
+            "type": "คอร์สจอง",
+            "total_students": course['total_students'],
+            "revenue": course['total_income']
+        })
+
+    video_courses = VideoCourse.objects.values_list('name', 'price')
+    video_prices = {name: price for name, price in video_courses}
+
+    video_revenues = CourseOrder.objects.filter(status="paid").values('course_name').annotate(
+        total_students=Count('course_name')
+    )
+
+    for course in video_revenues:
+        course_revenues.append({
+            "title": course['course_name'],
+            "type": "คอร์สวิดีโอ",
+            "total_students": course['total_students'],
+            "revenue": video_prices.get(course['course_name'], 0) * course['total_students']
+        })
+
+    return Response({"course_revenues": course_revenues})
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def monthly_income_api(request):
+    """ API ดึงข้อมูลรายได้แยกตามเดือน """
+
+    monthly_income = []
+    thai_months = [
+        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+    ]
+
+    video_courses = VideoCourse.objects.values_list('name', 'price')
+    video_prices = {name: price for name, price in video_courses}
+
+    for month in range(1, 13):
+        monthly_booking = CourseBooking.objects.filter(
+            booking_status="confirmed",
+            booking_date__month=month
+        ).aggregate(total=Sum('course__price'))['total'] or 0
+
+        monthly_video = sum(
+            video_prices.get(order.course_name, 0) * order.total_students
+            for order in CourseOrder.objects.filter(status="paid", order_date__month=month)
+            .values('course_name')
+            .annotate(total_students=Count('course_name'))
+        )
+
+        monthly_total = monthly_booking + monthly_video
+        monthly_income.append({
+            "month": thai_months[month - 1],
+            "total_income": monthly_total
+        })
+
+    return Response({"monthly_income": monthly_income})
+
+
 #---------------------------------------------api แอดมิน --------------------------------------------------------
 
 

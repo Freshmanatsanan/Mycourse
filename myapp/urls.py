@@ -147,6 +147,14 @@ urlpatterns = [
     path("api/send_back_course/<int:course_id>/", views.api_send_back_course, name="api_send_back_course"),
     path("api/upload_payment_qr/<int:course_id>/", views.api_upload_payment_qr, name="api_upload_payment_qr"),
     path("api/booking/<int:booking_id>/update-status/", views.update_booking_status_api, name="update_booking_status_api"),
+        # ✅ API รายได้รวม (สำหรับ Mobile)
+    path("api/admin/dashboard/", views.admin_dashboard_api, name="admin_dashboard_api"),
+
+    # ✅ API รายได้แยกตามคอร์ส
+    path("api/admin/course-revenue/", views.course_revenue_api, name="course_revenue_api"),
+
+    # ✅ API รายได้แยกตามเดือน
+    path("api/admin/monthly-income/", views.monthly_income_api, name="monthly_income_api"),
 
 
 
