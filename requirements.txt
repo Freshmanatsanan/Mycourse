@@ -6,3 +6,4 @@ whitenoise
 djangorestframework
 bcrypt
 djangorestframework-simplejwt
+plotly
