@@ -155,6 +155,9 @@ urlpatterns = [
 
     # ✅ API รายได้แยกตามเดือน
     path("api/admin/monthly-income/", views.monthly_income_api, name="monthly_income_api"),
+    path("api/request-reset-password/", views.request_reset_password_api, name="request_reset_password_api"),
+    path("api/verify-reset-password/", views.verify_reset_password_api, name="verify_reset_password_api"),
+    path("api/reset-password/", views.reset_password_api, name="reset_password_api"),
 
 
 

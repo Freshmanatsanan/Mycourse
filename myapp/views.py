@@ -65,6 +65,8 @@ from django.shortcuts import render
 from django.db.models import Sum, Count
 from datetime import datetime
 from .models import CourseBooking, CourseOrder, Course
+import datetime  # <-- ต้องเปลี่ยนเป็นแบบนี้
+from datetime import timedelta  # ✅ Import timedelta แยกออกมา
 
 def register(request):
     if request.method == 'POST':    
@@ -1377,6 +1379,109 @@ def monthly_income_api(request):
         })
 
     return Response({"monthly_income": monthly_income})
+
+
+# ✅ ฟังก์ชันสร้าง PIN 6 หลัก
+def generate_pin():
+    return ''.join(random.choices(string.digits, k=6))
+
+
+# ✅ 1. API ขอรหัส PIN รีเซ็ตรหัสผ่าน
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def request_reset_password_api(request):
+    email = request.data.get("email")
+    if not email:
+        return Response({"error": "กรุณาระบุอีเมล"}, status=400)
+
+    try:
+        user = User.objects.get(email=email)
+        pin = generate_pin()
+        expires_at = now() + timedelta(minutes=5)
+
+        # ✅ บันทึก PIN ใน session
+        request.session["reset_pin"] = {"pin": pin, "expires_at": expires_at.isoformat()}
+        request.session["reset_email"] = email
+
+        # ✅ ส่ง PIN ทางอีเมล
+        send_mail(
+            "รหัส PIN รีเซ็ตรหัสผ่าน",
+            f"รหัส PIN ของคุณคือ {pin} (หมดอายุใน 5 นาที)",
+            settings.EMAIL_HOST_USER,
+            [email],
+            fail_silently=False,
+        )
+
+        return Response({"message": "รหัส PIN ถูกส่งไปยังอีเมลของคุณแล้ว"})
+    except User.DoesNotExist:
+        return Response({"error": "ไม่พบอีเมลนี้ในระบบ"}, status=404)
+
+
+# ✅ 2. API ตรวจสอบรหัส PIN
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def verify_reset_password_api(request):
+    entered_pin = request.data.get("pin")
+    if not entered_pin:
+        return Response({"error": "กรุณากรอกรหัส PIN"}, status=400)
+
+    session_data = request.session.get("reset_pin", {})
+
+    if not session_data:
+        return Response({"error": "รหัส PIN หมดอายุ กรุณาขอใหม่"}, status=400)
+
+    stored_pin = session_data.get("pin")
+    expires_at = session_data.get("expires_at")
+
+    # ✅ ตรวจสอบ PIN หมดอายุหรือไม่
+    if expires_at and now() > datetime.datetime.fromisoformat(expires_at):
+        del request.session["reset_pin"]
+        return Response({"error": "รหัส PIN หมดอายุ กรุณาขอใหม่"}, status=400)
+
+    # ✅ ตรวจสอบ PIN ถูกต้องหรือไม่
+    if entered_pin == stored_pin:
+        return Response({"message": "รหัส PIN ถูกต้อง"})
+    else:
+        return Response({"error": "รหัส PIN ไม่ถูกต้อง"}, status=400)
+
+
+# ✅ ฟังก์ชันตรวจสอบความแข็งแกร่งของรหัสผ่าน
+def is_valid_password(password):
+    return len(password) >= 8 and re.search(r"[0-9]", password)
+
+
+# ✅ 3. API ตั้งรหัสผ่านใหม่
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def reset_password_api(request):
+    new_password = request.data.get("new_password")
+    confirm_password = request.data.get("confirm_password")
+
+    if not new_password or not confirm_password:
+        return Response({"error": "กรุณากรอกรหัสผ่านทั้งสองช่อง"}, status=400)
+
+    if new_password != confirm_password:
+        return Response({"error": "รหัสผ่านไม่ตรงกัน"}, status=400)
+
+    if not is_valid_password(new_password):
+        return Response({"error": "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัว และมีตัวเลข"}, status=400)
+
+    email = request.session.get("reset_email")
+    if not email:
+        return Response({"error": "ไม่พบข้อมูลอีเมล กรุณาขอ PIN ใหม่"}, status=400)
+
+    try:
+        user = User.objects.get(email=email)
+        user.set_password(new_password)
+        user.save()
+
+        # ✅ ล้างข้อมูล PIN ออกจาก session
+        request.session.pop("reset_pin", None)
+        request.session.pop("reset_email", None)
+
+        return Response({"message": "เปลี่ยนรหัสผ่านสำเร็จ"})
+    except User.DoesNotExist:
+        return Response({"error": "ไม่พบบัญชีผู้ใช้"}, status=404)
 
 
 #---------------------------------------------api แอดมิน --------------------------------------------------------
@@ -2749,8 +2854,6 @@ def update_profile_admin(request):
         return redirect(reverse('profile_admin')) 
     
     return render(request, 'admin/update_profile_admin.html', {'user': request.user, 'profile': request.user.profile})
-
-
 
 
 def generate_pin():
