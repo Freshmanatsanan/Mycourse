@@ -65,7 +65,6 @@ from django.shortcuts import render
 from django.db.models import Sum, Count
 from datetime import datetime
 from .models import CourseBooking, CourseOrder, Course
-import datetime  # <-- ต้องเปลี่ยนเป็นแบบนี้
 from datetime import timedelta  # ✅ Import timedelta แยกออกมา
 
 def register(request):
