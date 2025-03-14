@@ -123,3 +123,19 @@ def grant_access_to_user(file_id, user_email):
         body=permission,
         fields='id'
     ).execute()
+
+
+
+import os
+import json
+
+credentials_json = os.getenv("GOOGLE_CREDENTIALS")
+
+if credentials_json:
+    try:
+        service_account_info = json.loads(credentials_json)
+        print("✅ GOOGLE_CREDENTIALS Loaded Successfully!")
+    except json.JSONDecodeError as e:
+        print(f"❌ Error: JSON Decode Failed! {e}")
+else:
+    print("❌ GOOGLE_CREDENTIALS Not Found!")
