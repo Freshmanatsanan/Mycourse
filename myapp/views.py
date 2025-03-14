@@ -762,35 +762,68 @@ def login_api(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_approved_courses(request):
+    """
+    ✅ API ดึงคอร์สที่ได้รับอนุมัติ (ทั้งคอร์สจองและคอร์สวิดีโอ) เหมือน `home()`
+    """
     try:
         query = request.GET.get('q', '').strip()
-        
-        # กรองเฉพาะคอร์สที่ได้รับอนุมัติและยังเปิดรับสมัคร
-        approved_courses = Course.objects.filter(status='approved', is_closed=False)
 
-        # ถ้ามีการค้นหา ให้กรองผลลัพธ์ตามชื่อคอร์สหรือรายละเอียด
+        # ✅ ดึงแบนเนอร์ที่ได้รับอนุมัติ
+        banners = Banner.objects.filter(status="approved").values("id", "image")
+
+        # ✅ ดึงคอร์สจองที่ได้รับอนุมัติและยังเปิดรับสมัคร
+        approved_courses = Course.objects.filter(status='approved', is_closed=False).values(
+            "id", "title", "price", "image", "instructor"
+        )
+
+        # ✅ ดึงคอร์สวิดีโอที่ได้รับอนุมัติ
+        approved_video_courses = VideoCourse.objects.filter(status='approved').values(
+            "id", "title", "price", "image", "instructor"
+        )
+
+        # ✅ กรองผลลัพธ์ตามคำค้นหา
         if query:
             approved_courses = approved_courses.filter(
-                Q(title__icontains=query) | 
-                Q(description__icontains=query)
+                Q(title__icontains=query) | Q(description__icontains=query)
+            )
+            approved_video_courses = approved_video_courses.filter(
+                Q(title__icontains=query) | Q(description__icontains=query)
             )
 
+        # ✅ แปลงข้อมูลคอร์สจองเป็น JSON
         courses_data = [
             {
-                'id': course.id,
-                'title': course.title,
-                'price': course.price,
-                'image_url': request.build_absolute_uri(course.image.url) if course.image else None,
-                'instructor': course.instructor,
+                "id": course["id"],
+                "title": course["title"],  
+                "price": course["price"],
+                "image_url": request.build_absolute_uri(course["image"]) if course["image"] else None,
+                "instructor": course["instructor"],
+                "type": "คอร์สจอง"
             }
             for course in approved_courses
         ]
 
-        return Response(courses_data, status=status.HTTP_200_OK)
+        # ✅ แปลงข้อมูลคอร์สวิดีโอเป็น JSON
+        video_courses_data = [
+            {
+                "id": course["id"],
+                "title": course["title"],  
+                "price": course["price"],
+                "image_url": request.build_absolute_uri(course["image"]) if course["image"] else None,
+                "instructor": course["instructor"],
+                "type": "คอร์สวิดีโอ"
+            }
+            for course in approved_video_courses
+        ]
+
+        return Response({
+            "banners": list(banners),
+            "courses": courses_data,
+            "video_courses": video_courses_data
+        }, status=200)
     
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
+        return Response({'error': str(e)}, status=400)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])  # อนุญาตให้ทุกคนเข้าถึง API นี้
@@ -1822,6 +1855,8 @@ def course_revenue_api(request):
         })
 
     return Response({"course_revenues": course_revenues})
+
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
