@@ -39,21 +39,27 @@ class Staff(models.Model):
 
 class VideoCourse(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'รอการตรวจสอบ'),
+        ('pending', 'รอการอนุมัติ'),
         ('approved', 'อนุมัติแล้ว'),
         ('revision', 'ส่งกลับไปแก้ไข'),
         ('revised', 'แก้ไขแล้วรอการตรวจสอบ'),
     ]
 
-    name = models.CharField(max_length=255,unique=True)
-    description = models.TextField()
-    video_url = models.URLField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    title = models.CharField(max_length=255, unique=True, default="ไม่มีชื่อคอร์ส")
+    description = models.TextField(verbose_name="คำอธิบาย")
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="ราคา")
+    image = models.ImageField(upload_to='video_courses/images/', default='default_course_image.jpg')
+    instructor = models.CharField(max_length=255, default="ไม่ระบุผู้สอน")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name="สถานะ")
-    created_at = models.DateTimeField(auto_now_add=True)
+    revision_message = models.TextField(blank=True, null=True, verbose_name="ข้อความการแก้ไข")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="วันที่สร้าง")
+    added_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    is_closed = models.BooleanField(default=False, null=False) 
+    payment_qr = models.ImageField(upload_to='videocourses/payment_qrs/', blank=True, null=True, verbose_name="QR Code การชำระเงิน")
 
     def __str__(self):
-        return self.name
+        return self.title
+
 
 class CourseDetails(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
@@ -67,16 +73,19 @@ class CourseDetails(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
-class VideoCourseDetail(models.Model):
-    title = models.CharField(max_length=255)
-    description = models.TextField()
-    extra_description = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='course_images/')
-    extra_image = models.ImageField(upload_to='course_images/', blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+class VideoCourseDetails(models.Model):
+    course = models.ForeignKey(VideoCourse, on_delete=models.CASCADE, related_name="details", verbose_name="คอร์สที่เกี่ยวข้อง")
+    name = models.CharField(max_length=255, verbose_name="หัวข้อรายละเอียด")
+    description = models.TextField(verbose_name="คำอธิบาย")
+    additional_description = models.TextField(verbose_name="รายละเอียดเพิ่มเติม")
+    image = models.ImageField(upload_to='videocourse_details/images/', verbose_name="รูปภาพหลักของรายละเอียด")
+    additional_image = models.ImageField(upload_to='videocourse_details/extra_images/', verbose_name="รูปภาพเพิ่มเติม 1", blank=True, null=True)
+    preview_video = models.FileField(upload_to='videocourse_details/previews/', verbose_name="วิดีโอตัวอย่าง", blank=True, null=True)  
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="วันที่สร้าง")
 
     def __str__(self):
-        return self.title
+        return f"{self.course.title} - {self.name}"
+
     
 
 class Banner(models.Model):
@@ -100,28 +109,30 @@ class Banner(models.Model):
 
     
 
-class VideoLesson(models.Model):  # เปลี่ยนจาก VideoCourse เป็น VideoLesson
+class VideoLesson(models.Model):
     STATUS_CHOICES = [
         ('pending', 'รอการตรวจสอบ'),
         ('approved', 'อนุมัติแล้ว'),
         ('revision', 'ส่งกลับไปแก้ไข'),
     ]
-    name = models.CharField(max_length=255, verbose_name="ชื่อคอร์ส")
+
+    course = models.ForeignKey(VideoCourse, on_delete=models.CASCADE, null=True, blank=True)  
+    title = models.CharField(max_length=255, default="ไม่มีชื่อบทเรียน", verbose_name="ชื่อวิดีโอ")
     description = models.TextField(verbose_name="คำอธิบาย")
-    video_url = models.URLField(verbose_name="ลิงก์วิดีโอ")
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="ราคา")
+    google_drive_id = models.CharField(max_length=100, verbose_name="Google Drive File ID", default="", blank=True)
     duration = models.CharField(max_length=50, verbose_name="ระยะเวลา")
-    instructor = models.CharField(max_length=255, verbose_name="ผู้สอน")
+    instructor = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="ผู้สอน")
     is_approved = models.BooleanField(default=False, verbose_name="ตรวจสอบแล้ว")
-    status = models.CharField(
-        max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name="สถานะ"
-    )
-    payment_qr = models.ImageField(upload_to='payment_qrs/', blank=True, null=True, verbose_name="QR Code การชำระเงิน")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name="สถานะ")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="วันที่สร้าง")
 
+    document = models.FileField(upload_to='lesson_documents/', blank=True, null=True, verbose_name="เอกสารประกอบการเรียน")
+
+
     def __str__(self):
-        return self.name
-    
+        return f"{self.course.title} - {self.title}"
+
+
 
 class CourseOrder(models.Model):
     course_name = models.CharField(max_length=255, verbose_name="ชื่อคอร์ส")
@@ -133,6 +144,23 @@ class CourseOrder(models.Model):
 
     def __str__(self):
         return f"{self.customer_name} - {self.course_name}"
+    
+
+class VideoCourseOrder(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="ผู้ซื้อ")
+    course = models.ForeignKey('VideoCourse', on_delete=models.CASCADE, verbose_name="คอร์สที่ซื้อ")
+    payment_slip = models.ImageField(upload_to='payment_slips/', verbose_name="สลิปการโอนเงิน")
+    payment_status = models.CharField(
+        max_length=10,
+        choices=[('pending', 'รออนุมัติ'), ('confirmed', 'ชำระแล้ว'), ('rejected', 'ปฏิเสธ')],
+        default='pending',
+        verbose_name="สถานะการชำระเงิน"
+    )
+    transaction_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="เลขที่รายการโอนเงิน")
+    payment_date = models.DateTimeField(auto_now_add=True, verbose_name="วันที่ชำระเงิน")
+
+    def __str__(self):
+        return f"{self.user.username} - {self.course.title} - {self.payment_status}"
     
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile" ,default=1)

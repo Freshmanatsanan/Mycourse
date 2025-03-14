@@ -21,25 +21,26 @@
         <a href="{% url 'my_courses' %}" class="tab-btn">คอร์สเรียนของฉัน</a>
     </div>
 
-    <!-- Main Content -->
-    <main class="courses-page">
-
-
+     <!-- Main Content -->
+     <main class="courses-page">
         <div class="container">
             <h1 class="page-title">คอร์สเรียนทั้งหมด</h1>
+
+            <!-- ✅ คอร์สเรียนออนไซต์ -->
+            <h2 class="section-title">คอร์สเรียนออนไซต์</h2>
+            <hr class="section-divider">
             <div class="courses-grid">
                 {% for course in courses %}
-                <!-- คอร์สเรียนทั้งหมด -->
                 {% if not course.is_closed %} 
                 <section class="all-courses">
                     <div class="course-item">
                         <div class="course-thumbnail">
-                            <img src="{{ course.image.url }}" alt="{{ course.name }}">
+                            <img src="{{ course.image.url }}" alt="{{ course.title }}">
                         </div>
                         <div class="course-info">
                             <h3>{{ course.title }}</h3>
                             <p>{{ course.description }}</p>
-                            <td>{{ course.instructor }}</td>
+                            <p class="instructor">ผู้สอน: {{ course.instructor }}</p>
                             <p class="price">{{ course.price }} ฿</p>
                             <div class="course-buttons">
                                 <a href="{% url 'booking_course' course.id %}" class="btn blue">จองคอร์ส</a>
@@ -47,16 +48,44 @@
                             </div>
                         </div>
                     </div>
-                    {% endif %}
+                </section>
+                {% endif %}
+                {% empty %}
+                <p>ไม่มีคอร์สออนไซต์ที่พร้อมใช้งาน</p>
+                {% endfor %}
+            </div>
 
+            <!-- ✅ คอร์สเรียนแบบวิดีโอ -->
+            <h2 class="section-title">คอร์สเรียนแบบวิดีโอ</h2>
+            <hr class="section-divider">
+            <div class="courses-grid">
+                {% for course in video_courses %}
+                <section class="all-courses">
+                    <div class="course-item">
+                        <div class="course-thumbnail">
+                            <img src="{{ course.image.url }}" alt="{{ course.title }}">
+                        </div>
+                        <div class="course-info">
+                            <h3>{{ course.title }}</h3>
+                            <p>{{ course.description }}</p>
+                            <p class="instructor">ผู้สอน: {{ course.instructor }}</p>
+                            <p class="price">{{ course.price }} ฿</p>
+                            <div class="course-buttons">
+                                <a href="{% url 'purchase_video_course' course.id %}" class="btn green">ซื้อคอร์ส</a>
+                                <a href="{% url 'video_course_details_user' course.id %}" class="btn orange">ดูรายละเอียดเพิ่มเติม</a>
+                            </div>
+                        </div>
+                    </div>
                 </section>
                 {% empty %}
-                <p>ไม่มีคอร์สที่พร้อมใช้งาน</p>
+                <p>ไม่มีคอร์สวิดีโอที่พร้อมใช้งาน</p>
                 {% endfor %}
-
-
             </div>
+
+            
+
         </div>
     </main>
+
 </body>
 </html>

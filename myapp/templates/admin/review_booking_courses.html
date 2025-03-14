@@ -82,7 +82,7 @@
                             {% if course.payment_qr %}
                             <a href="{% url 'approve_course' course.id %}" class="btn btn-approve">อนุมัติ</a>
                             {% else %}
-                            <button class="btn btn-approve" disabled>❌ อนุมัติ</button>
+                            <button class="btn btn-approve" disabled>อนุมัติ</button>
                             {% endif %}
                             <a href="javascript:void(0);" class="btn btn-revision"
                                 onclick="openModal({{ course.id }})">ส่งกลับไปแก้ไข</a>

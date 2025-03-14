@@ -2,7 +2,7 @@ from django.urls import path
 from . import views
 from .views import register, login_view
 from rest_framework_simplejwt.views import TokenRefreshView
-
+from .views import youtube_video_details
 
 urlpatterns = [
     # สำหรับ Web
@@ -21,11 +21,33 @@ urlpatterns = [
     path('ireservation/', views.reservation_courses, name='reservation_courses'),
     path('add_course/', views.add_course, name='add_course'),
     path('edit-course/<int:course_id>/', views.edit_course, name='edit_course'),
+
+    path('video_course_details/<int:course_id>/', views.video_course_details, name='video_course_details'),
     path('video_courses/', views.video_courses, name='instructor_live_courses'),
     path('add_video_course/', views.add_video_course, name='add_video_course'),
+    path('add_video_course_details/<int:course_id>/', views.add_video_course_details, name='add_video_course_details'), 
+    path('edit_video_course/<int:course_id>/', views.edit_video_course, name='edit_video_course'),
+    path('edit_video_course_details/<int:course_id>/', views.edit_video_course_details, name='edit_video_course_details'),
+    path('edit_video_lesson/<int:course_id>/', views.edit_video_lesson, name='edit_video_lesson'),
+    path('approve_video_course/<int:course_id>/', views.approve_video_course, name="approve_video_course"),
+    path('send_back_video_course/<int:course_id>/', views.send_back_video_course, name="send_back_video_course"),
+    path('upload_video_course_qr/<int:course_id>/', views.upload_video_course_qr, name='upload_video_course_qr'),
+    path('video_course_details_user/<int:course_id>/', views.video_course_details_user, name='video_course_details_user'),
+    path('purchase_video_course/<int:course_id>/', views.purchase_video_course, name='purchase_video_course'),
+    path('confirm-video-order/<int:order_id>/', views.confirm_video_order, name='confirm_video_order'),
+    path('reject-video-order/<int:order_id>/', views.reject_video_order, name='reject_video_order'),
+    path('video-lesson-view/<int:course_id>/', views.video_lesson_view, name='video_lesson_view'),
+    path('video_order_detail_instructor/<int:course_id>/', views.video_order_detail_instructor, name='video_order_detail_instructor'),
+    path('delete_selected_video_courses/', views.delete_selected_video_courses, name='delete_selected_video_courses'),
+
+
+
+
+    
+
+
     path('add_course_details/<int:course_id>/', views.add_course_details, name='add_course_details'),
     path('edit-course-details/<int:course_id>/', views.edit_course_details, name='edit_course_details'),
-    path('add_video_course_details/', views.add_video_course_details, name='add_video_course_details'),
     path('submit_course_for_review/<int:course_id>/', views.submit_course_for_review, name='submit_course_for_review'),
     path('banners/', views.banners, name='banners'),
     path('add_banner/', views.add_banner, name='add_banner'),
@@ -35,9 +57,6 @@ urlpatterns = [
     path('approve_course/<int:course_id>/', views.approve_course, name='approve_course'),
     path('send-back-course/<int:course_id>/', views.send_back_course, name='send_back_course'),
     path('upload_payment_qr/<int:course_id>/', views.upload_payment_qr, name='upload_payment_qr'),
-    path('review_video_lessons/', views.review_video_courses, name='review_video_courses'),  # เปลี่ยนเส้นทาง URL
-    path('approve_video_lesson/<int:course_id>/', views.approve_video_course, name='approve_video_course'),
-    path('send_back_video_lesson/<int:course_id>/', views.send_back_video_course, name='send_back_video_course'),
     path('sales/', views.sales, name='sales'),
     path('user-list/', views.user_list, name='user_list'),
     path('delete-selected-courses/', views.delete_selected_courses, name='delete_selected_courses'),
@@ -76,8 +95,11 @@ urlpatterns = [
     path('close-course/<int:course_id>/', views.close_course, name='close_course'),
     path('reopen-course/<int:course_id>/', views.reopen_course, name='reopen_course'),
 
+#---------------------------ทดสอบAPi
+    path("youtube/", youtube_video_details, name="youtube_video_details"),
+    path('add_video_lesson/<int:course_id>/', views.add_video_lesson, name='add_video_lesson'),
+    path("review_video_courses/", views.review_video_courses, name="review_video_courses"),  # ✅ เพิ่มเส้นทางนี้
 
-    
     
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # สำหรับ API

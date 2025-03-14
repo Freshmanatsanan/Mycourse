@@ -117,8 +117,9 @@ body {
 
 .course-list {
     display: flex;
-    justify-content: left;
-    gap: 20px;
+    flex-wrap: nowrap;  /* ห้ามให้รายการแถวใหม่ */
+    overflow-x: auto;  /* ทำให้สามารถเลื่อนไปซ้ายขวา */
+    gap: 20px;  /* ระยะห่างระหว่างคอร์ส */
 }
 
 .course-item {
@@ -129,6 +130,7 @@ body {
     text-align: center;
     width: 300px;
     transition: transform 0.3s ease;
+    flex-shrink: 0; /* ห้ามยุบขนาด */
 }
 .course-item:hover {
     transform: translateY(-5px);

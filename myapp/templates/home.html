@@ -92,16 +92,22 @@ document.addEventListener('DOMContentLoaded', () => {
             <h2 class="section-title">คอร์สเรียนวิดีโอใหม่ล่าสุด</h2>
             <hr class="section-divider">
             <div class="course-list">
-                <!-- คอร์สวิดีโอ -->
+                {% for course in video_courses %}
                 <div class="course-item">
-                    <img src="{% static 'images/course01.jpg' %}" alt="Course Video">
-                    <h3>คอร์สวิดีโอสำหรับเด็ก</h3>
-                    <p>เนื้อหาสำหรับการพัฒนาภาษาอังกฤษ</p>
-                    <p class="price">1000 บาท/วีดีโอ</p>
-                    <a href="#" class="btn-course-1">ซื้อคอร์ส</a>
+                    <img src="{{ course.image.url }}" alt="{{ course.title }}">
+                    <h3>{{ course.title }}</h3>
+                    <p>{{ course.description|truncatewords:15 }}</p>  <!-- จำกัดคำให้อ่านง่าย -->
+                    <p class="price">{{ course.price }} บาท</p>
+                    
+                    <!-- ✅ ปุ่มซื้อคอร์สเรียน -->
+                    <a href="{% url 'purchase_video_course' course.id %}" class="btn-course-1">ซื้อคอร์ส</a>
                 </div>
+                {% empty %}
+                <p>ไม่มีคอร์สวิดีโอที่พร้อมใช้งานในขณะนี้</p>
+                {% endfor %}
             </div>
         </section>
+        
         
         
         <section class="course-section">

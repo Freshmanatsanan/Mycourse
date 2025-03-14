@@ -188,3 +188,5 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'isrno.100@gmail.com'  # อีเมลที่คุณใช้ส่ง 
 EMAIL_HOST_PASSWORD = 'jljjkcaatennnznn'  # รหัสผ่านของอีเมล
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+GOOGLE_DRIVE_CREDENTIALS = os.path.join(BASE_DIR, "service_account.json")

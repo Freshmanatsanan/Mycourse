@@ -64,9 +64,475 @@ import plotly.offline as opy
 from django.shortcuts import render
 from django.db.models import Sum, Count
 from datetime import datetime
-from .models import CourseBooking, CourseOrder, Course
+from .models import CourseBooking, CourseOrder, Course,VideoCourseDetails,VideoCourseOrder
 from datetime import timedelta  # ✅ Import timedelta แยกออกมา
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+#---------------------------------------------------------------------------------
 
+import requests
+from django.shortcuts import render
+from django.http import HttpResponseForbidden
+from .utils import grant_access_to_user  # ถ้า grant_access_to_user อยู่ในไฟล์ utils.py
+
+
+# ใส่ API Key ของคุณจาก Google Cloud
+YOUTUBE_API_KEY = "AIzaSyBv1lfL1TwK2JyJqD_w1q1OwPtXWbZzal8"  # 🔴 เปลี่ยนเป็น API Key ของคุณ
+
+def youtube_video_details(request):
+    video_data = None  # ตัวแปรเก็บข้อมูลวิดีโอ
+    error_message = None  # ตัวแปรเก็บข้อความผิดพลาด
+
+    if request.method == "POST":
+        video_id = request.POST.get("video_id")  # ดึงค่า Video ID จากฟอร์ม
+        if video_id:
+            url = f"https://www.googleapis.com/youtube/v3/videos?id={video_id}&key={YOUTUBE_API_KEY}&part=snippet,statistics"
+            response = requests.get(url)
+            data = response.json()
+
+            if "items" in data and len(data["items"]) > 0:
+                video_data = data["items"][0]  # ดึงข้อมูลวิดีโอ
+            else:
+                error_message = "ไม่พบข้อมูลวิดีโอนี้ กรุณาตรวจสอบ Video ID อีกครั้ง"
+
+    return render(request, "youtube_video.html", {"video_data": video_data, "error_message": error_message})
+
+#------------------------------------------------FORviDeo--------------------------------
+
+import os
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from .models import VideoLesson
+from .utils import upload_video_to_drive  # ฟังก์ชันอัปโหลดวิดีโอไป Google Drive
+from decimal import Decimal  # ✅ ต้อง import ก่อนใช้
+
+@login_required
+def add_video_lesson(request, course_id):
+    course = get_object_or_404(VideoCourse, id=course_id)
+
+    if request.method == "POST":
+        title = request.POST.get("title")
+        description = request.POST.get("description")
+        duration = request.POST.get("duration")
+        video_file = request.FILES.get("video_file")
+        document = request.FILES.get("document")  
+
+        if not title or not description or not duration or not video_file:
+            return JsonResponse({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
+
+        # บันทึกไฟล์วิดีโอชั่วคราว
+        temp_file_path = os.path.join("media", video_file.name)
+        with open(temp_file_path, "wb+") as destination:
+            for chunk in video_file.chunks():
+                destination.write(chunk)
+        destination.close()
+
+        # อัปโหลดไป Google Drive
+        google_drive_id = upload_video_to_drive(temp_file_path, video_file.name, request.user.email)
+
+        # ลบไฟล์ชั่วคราว
+        try:
+            os.remove(temp_file_path)
+        except PermissionError:
+            print(f"❌ ไม่สามารถลบไฟล์: {temp_file_path}")
+
+        # บันทึกวิดีโอเข้า DB
+        VideoLesson.objects.create(
+            course=course,
+            title=title,
+            description=description,
+            google_drive_id=google_drive_id,
+            duration=duration,
+            instructor=request.user,
+            document=document 
+        )
+        print("✅ อัปโหลดสำเร็จ กำลังเปลี่ยนเส้นทาง...")
+        return redirect('instructor_live_courses')
+  # ✅ ส่งกลับไปที่รายละเอียดคอร์ส
+
+    return render(request, "instructor/add_video_lesson.html", {"course": course})
+
+
+@login_required
+def add_video_course(request):
+    if request.method == "POST":
+        title = request.POST.get("title")
+        description = request.POST.get("description")
+        price = request.POST.get("price")
+        instructor_name = request.POST.get("instructor")  # ✅ รับค่าผู้สอนจากฟอร์ม
+        image = request.FILES.get("image")
+
+        if not title or not description or not price or not image or not instructor_name:
+            return JsonResponse({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
+
+        course = VideoCourse.objects.create(
+            title=title,
+            description=description,
+            price=price,
+            image=image,
+            instructor=instructor_name,
+            added_by=request.user,  # ✅ บันทึกเป็นชื่อผู้สอน
+            status="pending"
+        )
+
+        return redirect(reverse('add_video_course_details', kwargs={'course_id': course.id}))
+    
+    return render(request, "instructor/add_video_course.html")
+
+
+
+def video_courses(request):
+    courses = VideoCourse.objects.all()  # ดึงข้อมูลคอร์สเรียนแบบวิดีโอทั้งหมด
+    return render(request, "instructor/video_courses.html", {"courses": courses})
+
+@login_required
+def video_course_details(request, course_id):
+    course = get_object_or_404(VideoCourse, id=course_id)
+    lessons = VideoLesson.objects.filter(course=course)
+
+    return render(request, "instructor/video_course_details.html", {"course": course, "lessons": lessons})
+
+@login_required
+def add_video_course_details(request, course_id):
+    course = get_object_or_404(VideoCourse, id=course_id)
+
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+        additional_description = request.POST.get('additional_description', '')
+        image = request.FILES.get('image')
+        additional_image = request.FILES.get('additional_image')
+        preview_video = request.FILES.get('preview_video') 
+
+        if not name or not description or not image:
+            return JsonResponse({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
+
+        # ✅ บันทึกข้อมูลลงใน `VideoCourseDetails`
+        VideoCourseDetails.objects.create(
+            course=course,
+            name=name,
+            description=description,
+            additional_description=additional_description,
+            image=image,
+            additional_image=additional_image,
+            preview_video=preview_video 
+        )
+
+        return redirect(reverse('add_video_lesson', kwargs={'course_id': course.id}))  
+
+
+    return render(request, 'instructor/add_video_course_details.html', {"course": course})
+
+
+def delete_selected_video_courses(request):
+    if request.method == "POST":
+        try:
+            # ตรวจสอบการอ่านข้อมูลที่ถูกส่งมาจากฟอร์ม
+            selected_courses = request.POST.getlist("selected_courses")  # รับค่า selected_courses
+            if not selected_courses:
+                messages.error(request, "กรุณาเลือกคอร์สที่ต้องการลบ")
+                return redirect("instructor_live_courses")  # เปลี่ยนเส้นทางกลับไปที่หน้าคอร์ส
+
+            # ลบคอร์สที่เลือก
+            for course_id in selected_courses:
+                course = get_object_or_404(VideoCourse, id=course_id)
+                VideoCourseDetails.objects.filter(course=course).delete()  # ลบรายละเอียดคอร์ส
+                VideoLesson.objects.filter(course=course).delete()  # ลบบทเรียนวิดีโอ
+                course.delete()  # ลบคอร์สวิดีโอ
+
+            messages.success(request, "ลบคอร์สเรียนสำเร็จ!")  # ส่งข้อความแจ้งเตือน
+            return redirect("instructor_live_courses")  # เปลี่ยนเส้นทางกลับไปที่หน้าคอร์ส
+
+        except json.JSONDecodeError:
+            messages.error(request, "รูปแบบข้อมูลไม่ถูกต้อง")
+            return redirect("instructor_live_courses")  # เปลี่ยนเส้นทางกลับไปที่หน้าคอร์ส
+
+    messages.error(request, "ไม่สามารถลบคอร์สได้")
+    return redirect("instructor_live_courses")  # เปลี่ยนเส้นทางกลับไปที่หน้าคอร์ส# เปลี่ยนเส้นทางกลับไปที่หน้าคอร์ส
+@login_required
+def edit_video_course(request, course_id):
+    course = get_object_or_404(VideoCourse, id=course_id)
+
+    if request.method == "POST":
+        title = request.POST.get("title")
+        description = request.POST.get("description")
+        price = request.POST.get("price")
+        image = request.FILES.get("image")
+
+        if not title or not description or not price:
+            return JsonResponse({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
+
+        # อัปเดตรายละเอียดของคอร์ส
+        course.title = title
+        course.description = description
+        course.price = price
+
+        # อัปโหลดรูปภาพใหม่ (ถ้ามี)
+        if image:
+            if course.image:
+                if os.path.exists(course.image.path):
+                    os.remove(course.image.path)
+            course.image = image
+        course.status = 'revised'
+        course.save()
+
+
+        messages.success(request, "✅ คอร์สของคุณถูกส่งไปให้แอดมินตรวจสอบอีกครั้ง!")
+
+        return redirect('edit_video_course_details', course_id=course.id)  # ✅ ไปยังหน้าถัดไป
+
+    return render(request, "instructor/edit_video_course.html", {"course": course})
+
+@login_required
+def edit_video_course_details(request, course_id):
+    course_details = get_object_or_404(VideoCourseDetails, course_id=course_id)
+
+    if request.method == "POST":
+        name = request.POST.get("name")
+        description = request.POST.get("description")
+        additional_description = request.POST.get("additional_description", "")
+        image = request.FILES.get("image")
+        additional_image = request.FILES.get("additional_image")
+        preview_video = request.FILES.get("preview_video")
+
+        if not name or not description:
+            return JsonResponse({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
+
+        # ✅ อัปเดตข้อมูลใน `VideoCourseDetails`
+        course_details.name = name
+        course_details.description = description
+        course_details.additional_description = additional_description
+
+        # ✅ จัดการอัปเดตรูปภาพ
+        if image:
+            if course_details.image and os.path.exists(course_details.image.path):
+                os.remove(course_details.image.path)
+            course_details.image = image
+        
+        if additional_image:
+            if course_details.additional_image and os.path.exists(course_details.additional_image.path):
+                os.remove(course_details.additional_image.path)
+            course_details.additional_image = additional_image
+
+        # ✅ จัดการอัปโหลดวิดีโอตัวอย่าง
+        if preview_video:
+            if course_details.preview_video and os.path.exists(course_details.preview_video.path):
+                os.remove(course_details.preview_video.path)
+            course_details.preview_video = preview_video
+
+        course_details.course.status = 'revised'
+
+        course_details.save()
+
+        return redirect("edit_video_lesson", course_id=course_details.course.id)  # ✅ ไปยังหน้าถัดไป
+
+    return render(request, "instructor/edit_video_course_details.html", {"course_details": course_details})
+
+@login_required
+def edit_video_lesson(request, course_id):
+    lesson = get_object_or_404(VideoLesson, course_id=course_id)
+
+    if request.method == "POST":
+        title = request.POST.get("title")
+        description = request.POST.get("description")
+        duration = request.POST.get("duration")
+        document = request.FILES.get("document")
+        video_file = request.FILES.get("video_file")  # รับไฟล์วิดีโอใหม่
+
+        if not title or not description or not duration:
+            return JsonResponse({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
+
+        # อัปเดตข้อมูลทั่วไป
+        lesson.title = title
+        lesson.description = description
+        lesson.duration = duration
+
+        # อัปเดตเอกสารแนบ
+        if document:
+            if lesson.document and os.path.exists(lesson.document.path):
+                os.remove(lesson.document.path)  # ลบไฟล์เดิมถ้ามี
+            lesson.document = document  # บันทึกไฟล์ใหม่
+
+        # อัปโหลดวิดีโอใหม่ (ถ้ามี)
+        if video_file:
+            temp_file_path = os.path.join("media", video_file.name)
+            with open(temp_file_path, "wb+") as destination:
+                for chunk in video_file.chunks():
+                    destination.write(chunk)
+
+            # อัปโหลดไป Google Drive
+            google_drive_id = upload_video_to_drive(temp_file_path, video_file.name)
+
+            # ลบไฟล์วิดีโอเดิม (ถ้ามี)
+            if lesson.google_drive_id:
+                print(f"📌 ลบวิดีโอเก่า: {lesson.google_drive_id}")
+
+            # อัปเดตข้อมูลไฟล์ใหม่
+            lesson.google_drive_id = google_drive_id
+
+            # ลบไฟล์ชั่วคราว
+            try:
+                os.remove(temp_file_path)
+            except PermissionError:
+                print(f"❌ ไม่สามารถลบไฟล์: {temp_file_path}")
+        lesson.course.status = 'revised'
+        lesson.save()
+        print("✅ อัปเดตข้อมูลสำเร็จ กำลังเปลี่ยนเส้นทางไป video_courses...")
+        return redirect("instructor_live_courses")  # ✅ กลับไปที่รายการคอร์สวิดีโอ
+
+    return render(request, "instructor/edit_video_lesson.html", {"lesson": lesson})
+
+def review_video_courses(request):
+    """ ดึงคอร์สที่อยู่ในสถานะ 'รอการอนุมัติ' และ 'แก้ไขแล้วรอการตรวจสอบ' """
+    courses = VideoCourse.objects.filter(status__in=['pending', 'revised'])
+    return render(request, 'admin/review_video_courses.html', {'courses': courses})
+
+
+def approve_video_course(request, course_id):
+    """ อนุมัติคอร์สเรียนแบบวิดีโอ """
+    course = get_object_or_404(VideoCourse, id=course_id)
+    course.status = 'approved'
+    course.save()
+
+    # อัปเดต VideoLesson ที่เกี่ยวข้อง
+    video_lessons = VideoLesson.objects.filter(course=course, status='pending')
+    video_lessons.update(status='approved')  # อัปเดตสถานะให้เป็น approved
+
+    messages.success(request, "✅ คอร์สเรียนได้รับการอนุมัติแล้วและ VideoLessons ที่เกี่ยวข้องได้รับการอนุมัติด้วย!")
+    return redirect('review_video_courses')
+
+@receiver(post_save, sender=VideoCourse)
+def approve_video_lessons(sender, instance, created, **kwargs):
+    """ เมื่อคอร์สเรียนแบบวิดีโอได้รับการอนุมัติ, อนุมัติ VideoLesson ด้วย """
+    if instance.status == 'approved':
+        # ดึง VideoLesson ที่เกี่ยวข้องกับ VideoCourse นี้
+        video_lessons = VideoLesson.objects.filter(course=instance, status='pending')
+        video_lessons.update(status='approved')  # อัปเดตสถานะให้เป็น approved
+
+def send_back_video_course(request, course_id):
+    """ ส่งคอร์สเรียนกลับไปแก้ไข """
+    if request.method == 'POST':
+        revision_message = request.POST.get('revision_message')
+        course = get_object_or_404(VideoCourse, id=course_id)
+        course.status = 'revision'
+        course.revision_message = revision_message
+        course.save()
+        messages.warning(request, "⚠️ คอร์สถูกส่งกลับไปแก้ไขแล้ว!")
+        return redirect('review_video_courses')
+
+    return HttpResponseRedirect(reverse('review_video_courses'))
+
+def upload_video_course_qr(request, course_id):
+    """ ฟังก์ชันอัปโหลด QR Code สำหรับคอร์สเรียนแบบวิดีโอ """
+    course = get_object_or_404(VideoCourse, id=course_id)
+
+    if request.method == "POST" and 'payment_qr' in request.FILES:
+        course.payment_qr = request.FILES['payment_qr']
+        course.save()
+        messages.success(request, "✅ อัปโหลด QR Code สำเร็จแล้ว!")
+        return redirect('review_video_courses')
+
+    messages.error(request, "⚠️ กรุณาอัปโหลดไฟล์ QR Code")
+    return redirect('review_video_courses')
+
+
+def video_course_details_user(request, course_id):
+    """ แสดงรายละเอียดของคอร์สเรียนแบบวิดีโอ """
+    course = get_object_or_404(VideoCourse, id=course_id)
+    course_details = get_object_or_404(VideoCourseDetails, course_id=course_id)
+
+    return render(request, 'video_course_details_user.html', {
+        'course': course,
+        'course_details': course_details
+    })
+
+@login_required
+def purchase_video_course(request, course_id):
+    course = get_object_or_404(VideoCourse, id=course_id)
+
+    if request.method == "POST":
+        payment_slip = request.FILES.get("payment_slip")
+        if not payment_slip:
+            messages.error(request, "⚠ กรุณาอัปโหลดสลิปการโอนเงิน")
+            return redirect("purchase_video_course", course_id=course_id)
+
+        # บันทึกข้อมูลคำสั่งซื้อ
+        VideoCourseOrder.objects.create(
+            user=request.user,
+            course=course,
+            payment_slip=payment_slip,
+            payment_status="pending"  # รอแอดมินอนุมัติ
+        )
+
+        messages.success(request, "✅ คำสั่งซื้อของคุณถูกบันทึกแล้ว กรุณารอการตรวจสอบจากแอดมิน")
+        return redirect("my_courses")  # ไปยังหน้าคอร์สของฉัน
+
+    return render(request, "purchase_video_course.html", {"course": course})
+
+def video_order_detail(request, order_id):
+    """ แสดงรายละเอียดผู้ซื้อคอร์สเรียนแบบวิดีโอ """
+    course = get_object_or_404(VideoCourse, id=order_id)
+    orders = VideoCourseOrder.objects.filter(course=course)
+
+    return render(request, "admin/video_order_detail.html", {
+        "course": course,  # ✅ ส่งข้อมูลคอร์สวิดีโอไปยัง template
+        "orders": orders,  # ✅ ส่งข้อมูลคำสั่งซื้อทั้งหมดไปยัง template
+    })
+
+def confirm_video_order(request, order_id):
+    """ ✅ อนุมัติการชำระเงิน """
+    order = get_object_or_404(VideoCourseOrder, id=order_id)
+    order.payment_status = 'confirmed'
+    order.save()
+    messages.success(request, "✅ อนุมัติการชำระเงินเรียบร้อยแล้ว!")
+    return redirect('video_order_detail', order.course.id)
+
+def reject_video_order(request, order_id):
+    """ ❌ ปฏิเสธการชำระเงิน """
+    order = get_object_or_404(VideoCourseOrder, id=order_id)
+    order.payment_status = 'rejected'
+    order.save()
+    messages.error(request, "❌ ปฏิเสธการชำระเงินแล้ว!")
+    return redirect('video_order_detail', order.course.id)
+
+@login_required
+def video_lesson_view(request, course_id):
+    # ดึงคอร์สเรียนแบบวิดีโอ
+    course = get_object_or_404(VideoCourse, id=course_id)
+    
+    # ตรวจสอบว่าผู้ใช้ซื้อคอร์สนี้และได้รับการอนุมัติการชำระเงินแล้วหรือไม่
+    order = VideoCourseOrder.objects.filter(user=request.user, course=course, payment_status='confirmed').first()
+    
+    if not order:
+        return HttpResponseForbidden("คุณต้องทำการซื้อคอร์สนี้ก่อนถึงจะสามารถดูได้")
+
+    # ดึงบทเรียนทั้งหมดที่เกี่ยวข้องกับคอร์สนี้
+    lessons = VideoLesson.objects.filter(course=course)
+    
+    # ตรวจสอบสิทธิ์การเข้าถึงไฟล์ใน Google Drive (ถ้าไม่ได้รับอนุญาตจะทำการให้สิทธิ์)
+    for lesson in lessons:
+        if lesson.google_drive_id:  # ตรวจสอบว่าไฟล์มีอยู่ใน Google Drive
+            grant_access_to_user(lesson.google_drive_id, request.user.email)
+    
+    return render(request, 'video_lesson_view.html', {
+        'course': course,
+        'lessons': lessons
+    })
+
+@login_required
+def video_order_detail_instructor(request, course_id):
+    # ดึงคอร์สเรียนที่เลือก
+    course = get_object_or_404(VideoCourse, id=course_id)
+    
+    # ดึงคำสั่งซื้อที่เกี่ยวข้องกับคอร์สนี้
+    orders = VideoCourseOrder.objects.filter(course=course)
+    
+    return render(request, 'instructor/video_order_detail_instructor.html', {
+        'course': course,
+        'orders': orders,
+    })
+#--------------------------------------------------------------------------------
 def register(request):
     if request.method == 'POST':    
         username = request.POST['username']
@@ -1780,21 +2246,23 @@ def change_password_api(request):
 def sales(request):
     active_tab = request.GET.get("type", "booking")
 
-    # ✅ คอร์สที่มีการจอง (ดึงจาก Course ที่มี CourseBooking)
+    # ✅ คอร์สเรียนแบบจองที่มีการจอง
     booked_courses = Course.objects.filter(
         id__in=CourseBooking.objects.values("course_id")
     ).annotate(booking_count=Count("coursebooking"))
 
-    # ✅ หา CourseDetails ที่เกี่ยวข้อง (เพื่อดึงรายละเอียดเพิ่มเติม)
+    # ✅ หา CourseDetails ที่เกี่ยวข้อง
     course_details_dict = {cd.course_id: cd for cd in CourseDetails.objects.filter(course__in=booked_courses)}
 
-    # ✅ คอร์สวิดีโอที่มีการซื้อ
-    purchased_courses = CourseOrder.objects.values("course_name").annotate(purchase_count=Count("id"))
+    # ✅ คอร์สเรียนแบบวิดีโอที่มีการซื้อ
+    purchased_courses = VideoCourse.objects.filter(
+        id__in=VideoCourseOrder.objects.values("course_id")  # แก้ให้ใช้ VideoCourseOrder
+    ).annotate(purchase_count=Count("videocourseorder"))  # ใช้ related_name ที่ถูกต้อง
 
     return render(request, "admin/sales.html", {
         "booked_courses": booked_courses,
-        "course_details_dict": course_details_dict,  # ✅ ส่งข้อมูล CourseDetails ไปให้ Template
-        "purchased_courses": purchased_courses,
+        "course_details_dict": course_details_dict,  
+        "purchased_courses": purchased_courses,  # ✅ ส่งคอร์สวิดีโอที่ถูกซื้อไปที่ Template
         "active_tab": active_tab,
     })
 
@@ -1821,29 +2289,8 @@ def booking_detail(request, course_id):
     })
 
 
-def video_order_detail(request, order_id):
-    orders = CourseOrder.objects.filter(course_name=order_id)
 
-    return render(request, "admin/video_order_detail.html", {
-        "course": orders.first(),
-        "orders": orders,
-    })
 
-def review_video_courses(request):
-    courses = VideoLesson.objects.filter(status='pending')  # ใช้ VideoLesson
-    return render(request, 'admin/review_video_courses.html', {'courses': courses})
-
-def approve_video_course(request, course_id):
-    course = get_object_or_404(VideoLesson, id=course_id)  # ใช้ VideoLesson
-    course.status = 'approved'
-    course.save()
-    return redirect('review_video_courses')
-
-def send_back_video_course(request, course_id):
-    course = get_object_or_404(VideoLesson, id=course_id)  # ใช้ VideoLesson
-    course.status = 'revision'
-    course.save()
-    return redirect('review_video_courses')
 
 def upload_payment_qr(request, course_id):
     course = get_object_or_404(Course, id=course_id)
@@ -1917,41 +2364,49 @@ def send_back_course(request, course_id):
 
 from django.db.models import Case, When, Count, Sum, DecimalField, OuterRef, Subquery, Value, F
 
-def generate_graphs(booking_income_query, video_income_query):
-    """ ฟังก์ชันสร้างกราฟรายได้ตามคอร์สและรายได้แยกตามเดือน """
-
-    # ✅ **สร้างกราฟรายได้ตามคอร์ส**
+def generate_graphs(booking_income_query, video_income_query, filter_type, course_type):
+    """ ฟังก์ชันสร้างกราฟรายได้ตามคอร์สและรายได้แยกตามวันหรือเดือน """
+    
     course_names = []
     course_earnings = []
 
-    # ✅ ดึงรายได้จากคอร์สจอง
-    course_booking_totals = (
-        CourseBooking.objects.filter(booking_status="confirmed")
-        .values('course__title')
-        .annotate(total_income=Sum('course__price'))
-    )
+    # ✅ กรองตามฟิลเตอร์
+    if filter_type == "daily":
+        today = datetime.today().date()
+        booking_income_query = booking_income_query.filter(booking_date=today)
+        video_income_query = video_income_query.filter(payment_date=today)
+    elif filter_type == "monthly":
+        today = datetime.today()
+        booking_income_query = booking_income_query.filter(booking_date__month=today.month)
+        video_income_query = video_income_query.filter(payment_date__month=today.month)
 
-    for booking in course_booking_totals:
-        course_names.append(booking['course__title'])
-        course_earnings.append(booking['total_income'])
+    # ✅ **สร้างกราฟรายได้จากคอร์สจอง**
+    if course_type in ["all", "booking"]:
+        course_booking_totals = (
+            booking_income_query.values('course__title')
+            .annotate(total_income=Sum('course__price'))
+        )
+        for booking in course_booking_totals:
+            course_names.append(booking['course__title'])
+            course_earnings.append(booking['total_income'])
 
-    # ✅ ดึงรายได้จากคอร์สวิดีโอ โดยคำนวณแยกเพื่อป้องกันการซ้อน Aggregate Functions
-    video_courses = VideoCourse.objects.values_list('name', 'price')  # ดึงชื่อคอร์สวิดีโอและราคา
-    video_prices = {name: price for name, price in video_courses}  # แปลงเป็น Dictionary
+    # ✅ **สร้างกราฟรายได้จากคอร์สวิดีโอ**
+    if course_type in ["all", "video"]:
+        video_courses = VideoCourse.objects.values_list('id', 'price')  # ดึง 'id' แทน 'title'
+        video_prices = {course_id: price for course_id, price in video_courses}
 
-    course_video_totals = (
-        CourseOrder.objects.filter(status="paid")
-        .values('course_name')
-        .annotate(total_count=Count('course_name'))  # นับจำนวนที่ถูกซื้อ
-    )
+        course_video_totals = (
+            video_income_query.values('course_id')
+            .annotate(total_count=Count('course_id'))
+        )
 
-    for order in course_video_totals:
-        course_name = order['course_name']
-        total_students = order['total_count']
-        total_income = video_prices.get(course_name, 0) * total_students  # คำนวณรายได้รวม
-
-        course_names.append(course_name)
-        course_earnings.append(total_income)
+        for order in course_video_totals:
+            course_id = order['course_id']
+            total_students = order['total_count']
+            total_income = video_prices.get(course_id, 0) * total_students
+            course_name = VideoCourse.objects.get(id=course_id).title
+            course_names.append(course_name)
+            course_earnings.append(total_income)
 
     # ✅ สร้างกราฟแท่งแสดงรายได้แต่ละคอร์ส
     course_chart = go.Bar(
@@ -1987,7 +2442,7 @@ def generate_graphs(booking_income_query, video_income_query):
     fig_course = go.Figure(data=[course_chart], layout=layout)
     graph_course_div = opy.plot(fig_course, auto_open=False, output_type="div")
 
-    # ✅ **สร้างกราฟรายได้แยกตามเดือน**
+    # ✅ **สร้างกราฟรายได้แยกตามเดือนหรือวัน**
     thai_months = [
         "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
         "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
@@ -1997,16 +2452,15 @@ def generate_graphs(booking_income_query, video_income_query):
     month_labels = []
 
     for month in range(1, 13):
-        monthly_booking = CourseBooking.objects.filter(
-            booking_status="confirmed",
+        monthly_booking = booking_income_query.filter(
             booking_date__month=month
         ).aggregate(total=Sum('course__price'))['total'] or 0
 
         monthly_video = sum(
-            video_prices.get(order.course_name, 0) * order.total_count
-            for order in CourseOrder.objects.filter(status="paid", order_date__month=month)
-            .values('course_name')
-            .annotate(total_count=Count('course_name'))
+            video_prices.get(order['course_id'], 0) * order['total_count']
+            for order in video_income_query.filter(payment_date__month=month)
+            .values('course_id')
+            .annotate(total_count=Count('course_id'))
         )
 
         monthly_total = monthly_booking + monthly_video
@@ -2046,40 +2500,48 @@ def admin_dashboard(request):
 
     # ✅ **ดึงค่ารายได้รวมทั้งหมด (ไม่ใช้ฟิลเตอร์)**
     total_booking_courses = CourseBooking.objects.filter(booking_status="confirmed").count()
-    total_video_courses = CourseOrder.objects.filter(status="paid").count()
+    total_video_courses = VideoCourseOrder.objects.filter(payment_status="confirmed").count()
+    
     total_income = (
         CourseBooking.objects.filter(booking_status="confirmed").aggregate(total=Sum('course__price'))['total'] or 0
     ) + (
-        sum(VideoCourse.objects.filter(name=order.course_name).first().price or 0
-            for order in CourseOrder.objects.filter(status="paid"))
+        sum(
+            VideoCourse.objects.filter(id=order.course_id).first().price
+            if VideoCourse.objects.filter(id=order.course_id).exists() else 0
+            for order in VideoCourseOrder.objects.filter(payment_status="confirmed")
+        )
     )
+    
     booking_income = CourseBooking.objects.filter(booking_status="confirmed").aggregate(total=Sum('course__price'))['total'] or 0
+    
     video_income = sum(
-        VideoCourse.objects.filter(name=order.course_name).first().price or 0
-        for order in CourseOrder.objects.filter(status="paid")
+        VideoCourse.objects.filter(id=order.course_id).first().price
+        if VideoCourse.objects.filter(id=order.course_id).exists() else 0
+        for order in VideoCourseOrder.objects.filter(payment_status="confirmed")
     )
 
     # ✅ **ฟิลเตอร์ข้อมูลตามที่เลือก (ใช้กับตารางและกราฟเท่านั้น)**
     booking_income_query = CourseBooking.objects.filter(booking_status="confirmed")
-    video_income_query = CourseOrder.objects.filter(status="paid")
+    video_income_query = VideoCourseOrder.objects.filter(payment_status="confirmed")
 
     if course_type == "video":
         booking_income_query = CourseBooking.objects.none()
     elif course_type == "booking":
-        video_income_query = CourseOrder.objects.none()
+        video_income_query = VideoCourseOrder.objects.none()
 
     if filter_type == "daily":
         booking_income_query = booking_income_query.filter(booking_date=today)
-        video_income_query = video_income_query.filter(order_date=today)
+        video_income_query = video_income_query.filter(payment_date=today)
     elif filter_type == "monthly":
         booking_income_query = booking_income_query.filter(booking_date__month=today.month)
-        video_income_query = video_income_query.filter(order_date__month=today.month)
+        video_income_query = video_income_query.filter(payment_date__month=today.month)
 
     # ✅ **ดึงข้อมูลคอร์สและคำนวณรายได้ (ใช้กับกราฟและตาราง)**
     course_revenues = []
     course_names = []
     course_earnings = []
 
+    # ✅ **ข้อมูลคอร์สแบบจอง**
     if course_type in ["all", "booking"]:
         courses = Course.objects.all()
         for course in courses:
@@ -2087,7 +2549,7 @@ def admin_dashboard(request):
             total_students_in_course = CourseBooking.objects.filter(course=course, booking_status="confirmed").count()
 
             course_revenues.append({
-                "title": course.title,
+                "title": course.title,  # ✅ ใช้ title แทน name
                 "type": "คอร์สจอง",
                 "total_students": total_students_in_course,
                 "revenue": course_booking_income
@@ -2097,42 +2559,44 @@ def admin_dashboard(request):
             course_earnings.append(course_booking_income)
 
     if course_type in ["all", "video"]:
-        video_courses = VideoCourse.objects.all()
+        video_courses = VideoCourse.objects.filter(status="approved")  # กรองคอร์สที่ได้รับการอนุมัติ
         for course in video_courses:
+            # คำนวณรายได้จากการขายคอร์สวิดีโอโดยตรงจากราคาของ VideoCourse
             course_video_income = sum(
-                order.price for order in CourseOrder.objects.filter(course_name=course.name, status="paid")
+                order.course.price for order in VideoCourseOrder.objects.filter(course=course, payment_status="confirmed")
             )
-            total_students_in_course = CourseOrder.objects.filter(course_name=course.name, status="paid").count()
+            total_students_in_course = VideoCourseOrder.objects.filter(course=course, payment_status="confirmed").count()
 
             course_revenues.append({
-                "title": course.name,
+                "title": course.title,  # ใช้ title แทน name
                 "type": "คอร์สวิดีโอ",
                 "total_students": total_students_in_course,
                 "revenue": course_video_income
             })
 
-            course_names.append(course.name)
+            course_names.append(course.title)
             course_earnings.append(course_video_income)
 
     # ✅ **สร้างกราฟ**
-    graph_course_div, graph_monthly_div = generate_graphs(booking_income_query, video_income_query)
+    graph_course_div, graph_monthly_div = generate_graphs(
+    booking_income_query, video_income_query, filter_type, course_type
+)
+
 
     context = {
-        "total_income": total_income,
-        "video_income": video_income,
-        "booking_income": booking_income,
-        "total_booking_courses": total_booking_courses,
-        "total_video_courses": total_video_courses,
-        "course_revenues": course_revenues,
-        "filter_type": filter_type,
-        "course_type": course_type,
-        "graph_course_div": graph_course_div,
-        "graph_monthly_div": graph_monthly_div,
-    }
+    "total_income": total_income,
+    "video_income": video_income,
+    "booking_income": booking_income,
+    "total_booking_courses": total_booking_courses,
+    "total_video_courses": total_video_courses,
+    "course_revenues": course_revenues,  # ส่งข้อมูลคอร์สไปยังเทมเพลต
+    "filter_type": filter_type,
+    "course_type": course_type,
+    "graph_course_div": graph_course_div,
+    "graph_monthly_div": graph_monthly_div,
+}
+
     return render(request, "admin/dashboard_admin.html", context)
-
-
-
 
 @login_required
 def add_banner(request):
@@ -2197,15 +2661,7 @@ def delete_banner(request, banner_id):
     messages.success(request, "ลบเบนเนอร์สำเร็จ!")
     return redirect('banners')
 
-def add_video_course_details(request):
-    if request.method == 'POST':
-        title = request.POST.get('title')
-        description = request.POST.get('description')
-        extra_description = request.POST.get('extra_description', '')
-        image = request.FILES.get('image')
-        extra_image = request.FILES.get('extra_image')
-        return redirect('video_courses')
-    return render(request, 'instructor/add_video_course_details.html')
+
 
 
 
@@ -2264,57 +2720,46 @@ def submit_course_for_review(request, course_id):
         'course': course,
         'course_details': course_details
     })
-def add_video_course(request):
-    if request.method == 'POST':
-        # รับข้อมูลจากฟอร์ม
-        name = request.POST['name']
-        description = request.POST['description']
-        video_url = request.POST['video_url']
-        price = request.POST['price']
-
-        # บันทึกลงฐานข้อมูล (สมมติว่ามีโมเดล VideoCourse)
-        VideoCourse.objects.create(
-            name=name,
-            description=description,
-            video_url=video_url,
-            price=price
-        )
-        return redirect('video_courses')  # กลับไปยังหน้ารายการคอร์ส
-
-    return render(request, 'instructor/add_video_course.html')
-def video_courses(request):
-    return render(request, "instructor/video_courses.html")
 
 
 @instructor_required
+@login_required
 def add_course(request):
     if request.method == 'POST':
         title = request.POST.get('title')
         description = request.POST.get('description')
-        instructor = request.POST.get('instructor')  # รับค่าชื่อผู้สอน
+        instructor = request.POST.get('instructor')  
         price = request.POST.get('price')
         image = request.FILES.get('image')
 
+        print(f"📌 User adding course: {request.user} (ID: {request.user.id})")  
 
-        # บันทึกข้อมูลในโมเดล
-        course = Course.objects.create(
+        if not request.user.is_authenticated:
+            print("🚨 ผู้ใช้ไม่ได้ล็อกอิน! added_by จะเป็น NULL")
+            return redirect('login')  # ส่งไปล็อกอินก่อน
+
+        course = Course(
             title=title,
             description=description,
             instructor=instructor,
             price=price,
             image=image,
-
+            added_by=request.user  # ✅ บันทึก ID ผู้เพิ่มคอร์ส
         )
         course.save()
+
+        print(f"✅ Added by: {course.added_by} (ID: {course.added_by.id})")  # ✅ ตรวจสอบว่าถูกบันทึกจริงไหม
+
         messages.success(request, "เพิ่มคอร์สเรียนสำเร็จ! คุณสามารถเพิ่มรายละเอียดคอร์สเรียนต่อได้")
-        return redirect('add_course_details', course_id=course.id)  # ส่ง course_id ไปยังหน้ารายละเอียด
+        return redirect('add_course_details', course_id=course.id)
 
     return render(request, 'instructor/add_course.html')
 
 
+
 @instructor_required
 def edit_course(request, course_id):
-    course = get_object_or_404(Course, id=course_id)
+    course = get_object_or_404(Course, id=course_id,added_by=request.user)
     
     if request.method == 'POST':
         # รับค่าจากฟอร์มและบันทึก
@@ -2421,16 +2866,20 @@ def add_staff(request, user_id):  # รับ user_id เป็นพารา�
 def home(request):
     banners = Banner.objects.filter(status="approved") 
     approved_courses = Course.objects.filter(status='approved', is_closed=False)
+    approved_video_courses = VideoCourse.objects.filter(status='approved')
     
     if request.user.is_authenticated:
         return render(request, 'home.html', {
             'banners': banners,
             'courses': approved_courses,
+            'video_courses': approved_video_courses,
+
         })  # สำหรับสมาชิก
     
     return render(request, 'guest_home.html', {
         'banners': banners,
         'courses': approved_courses,
+        'video_courses': approved_video_courses,  
     })  # สำหรับผู้ที่ยังไม่ได้เป็นสมาชิก
 
 
@@ -2440,15 +2889,19 @@ def all_courses(request):
     
     # ✅ กรองเฉพาะคอร์สที่ได้รับอนุมัติและยังเปิดรับสมัคร
     approved_courses = Course.objects.filter(status='approved', is_closed=False)  
+    approved_video_courses = VideoCourse.objects.filter(status='approved')
 
     if query:
         approved_courses = approved_courses.filter(
             Q(title__icontains=query) | 
             Q(description__icontains=query)
         )
+        approved_video_courses = approved_video_courses.filter(
+            Q(title__icontains=query) | Q(description__icontains=query)
+        )
 
     template_name = 'all_courses.html' if request.user.is_authenticated else 'guest_all_courses.html'
-    return render(request, template_name, {'courses': approved_courses, 'query': query})
+    return render(request, template_name, {'courses': approved_courses, 'query': query,'video_courses': approved_video_courses, })
 
 
 #def all_courses(request):
@@ -2740,33 +3193,33 @@ def submit_payment(request, booking_id):
     messages.error(request, "⚠ กรุณาอัปโหลดไฟล์สลิป")
     return redirect("payment_page", booking_id=booking.id)
 
-
-
-
+#################################################################################################
 @login_required
 def instructor_sales(request):
-
-    user = request.user  # ✅ ดึงผู้ใช้ที่เข้าสู่ระบบ
     active_tab = request.GET.get("type", "booking")
 
-    # ✅ คอร์สที่มีการจอง (ดึงจาก Course ที่มี CourseBooking)
+    # ✅ คอร์สเรียนแบบจองที่มีการจอง
     booked_courses = Course.objects.filter(
         id__in=CourseBooking.objects.values("course_id")
     ).annotate(booking_count=Count("coursebooking"))
 
-    # ✅ หา CourseDetails ที่เกี่ยวข้อง (เพื่อดึงรายละเอียดเพิ่มเติม)
+    # ✅ หา CourseDetails ที่เกี่ยวข้อง
     course_details_dict = {cd.course_id: cd for cd in CourseDetails.objects.filter(course__in=booked_courses)}
 
-    # ✅ คอร์สวิดีโอที่มีการซื้อ
-    purchased_courses = CourseOrder.objects.values("course_name").annotate(purchase_count=Count("id"))
+    # ✅ คอร์สเรียนแบบวิดีโอที่มีการซื้อ
+    purchased_courses = VideoCourse.objects.filter(
+        id__in=VideoCourseOrder.objects.values("course_id")  # แก้ให้ใช้ VideoCourseOrder
+    ).annotate(purchase_count=Count("videocourseorder"))  # ใช้ related_name ที่ถูกต้อง
 
-    return render(request, "instructor/sales.html", {
+    return render(request, "instructor/sales.html",{
         "booked_courses": booked_courses,
-        "course_details_dict": course_details_dict,  # ✅ ส่งข้อมูล CourseDetails ไปให้ Template
-        "purchased_courses": purchased_courses,
+        "course_details_dict": course_details_dict,  
+        "purchased_courses": purchased_courses,  # ✅ ส่งคอร์สวิดีโอที่ถูกซื้อไปที่ Template
         "active_tab": active_tab,
 
     })
+
+
 
 
 @login_required
@@ -2817,9 +3270,16 @@ def user_booking_history(request):
 
 @login_required
 def my_courses(request):
-    """ แสดงเฉพาะคอร์สที่ผู้ใช้คนปัจจุบันจอง """
+    # ดึงข้อมูลการจองคอร์ส
     bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
-    return render(request, 'my_courses.html', {'bookings': bookings})
+    
+    # ดึงข้อมูลคอร์สวิดีโอที่ผู้ใช้ซื้อ
+    purchased_video_courses = VideoCourseOrder.objects.filter(user=request.user)
+    
+    return render(request, 'my_courses.html', {
+        'bookings': bookings,
+        'purchased_video_courses': purchased_video_courses
+    })
 
 @login_required
 def booking_my_courses(request, course_id):
@@ -2867,11 +3327,11 @@ def update_profile_admin(request):
     
     return render(request, 'admin/update_profile_admin.html', {'user': request.user, 'profile': request.user.profile})
 
-
+# ฟังก์ชันสร้าง PIN 6 หลัก
 def generate_pin():
     return ''.join(random.choices(string.digits, k=6))
 
-
+# ✅ 1. API ขอรหัส PIN รีเซ็ตรหัสผ่าน
 def request_reset_password(request):
     if request.method == "POST":
         email = request.POST["email"]
@@ -2882,7 +3342,7 @@ def request_reset_password(request):
             # ✅ ตั้งค่าเวลาหมดอายุของ PIN (5 นาที)
             request.session["reset_pin"] = {
                 "pin": pin,
-                "expires_at": (now() + datetime.timedelta(minutes=5)).isoformat()
+                "expires_at": (timezone.now() + timedelta(minutes=5)).isoformat()  # ใช้ timezone.now()
             }
             request.session["reset_email"] = email
 
@@ -2899,7 +3359,7 @@ def request_reset_password(request):
             messages.error(request, "ไม่พบอีเมลนี้ในระบบ")
     
     return render(request, "reset_password_request.html")
-
+from django.utils import timezone  # เพิ่มการ import timezone
 # ✅ 2. หน้า "ยืนยันรหัส PIN"
 def verify_reset_password(request):
     if request.method == "POST":
@@ -2922,7 +3382,7 @@ def verify_reset_password(request):
         expires_at = session_data.get("expires_at")
 
         # ✅ ตรวจสอบว่ารหัส PIN หมดอายุหรือยัง
-        if expires_at and now() > datetime.datetime.fromisoformat(expires_at):
+        if expires_at and timezone.now() > timezone.datetime.fromisoformat(expires_at):
             del request.session["reset_pin"]
             messages.error(request, "รหัส PIN หมดอายุ กรุณาขอใหม่")
             return redirect("reset_password_request")
@@ -2935,8 +3395,7 @@ def verify_reset_password(request):
 
     return render(request, "reset_password_verify.html")
 
-
-# ✅ 3. หน้า "ตั้งรหัสผ่านใหม่"
+# ✅ ฟังก์ชันตรวจสอบความแข็งแกร่งของรหัสผ่าน
 def is_valid_password(password):
     """✅ ตรวจสอบว่ารหัสผ่านแข็งแกร่งพอหรือไม่"""
     return (
@@ -2944,6 +3403,7 @@ def is_valid_password(password):
         re.search(r"[0-9]", password)
     )
 
+# ✅ 3. หน้า "ตั้งรหัสผ่านใหม่"
 def reset_password(request):
     if request.method == "POST":
         new_password = request.POST["new_password"]

@@ -102,7 +102,10 @@ header {
     max-width: 250px; /* จำกัดความกว้างสูงสุดของปุ่ม */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-
+.btn.green{
+    background-color: #9261ad;
+    border-radius: 10px;
+}
 .btn.blue {
     background-color: #3498db;
     border-radius: 10px;

@@ -162,3 +162,21 @@ header {
     box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3); /* เพิ่มเงา */
 }
 
+
+
+
+
+
+.preview-video {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.preview-video video {
+    width: 80%;  /* ปรับขนาดวิดีโอให้เล็กลง (80% ของพื้นที่) */
+    max-width: 500px; /* จำกัดขนาดวิดีโอไม่ให้ใหญ่เกิน 500px */
+    height: auto; /* คงอัตราส่วนของวิดีโอ */
+    border-radius: 10px; /* เพิ่มขอบมน */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* เพิ่มเงา */
+}
+
