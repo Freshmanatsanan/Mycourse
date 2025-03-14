@@ -126,16 +126,27 @@ def grant_access_to_user(file_id, user_email):
 
 
 
-import json
 import os
+import json
+from google.oauth2 import service_account
 
+# โหลด GOOGLE_CREDENTIALS
 credentials_json = os.getenv("GOOGLE_CREDENTIALS")
 
 if credentials_json:
     try:
         service_account_info = json.loads(credentials_json)
-        private_key = service_account_info.get("private_key", "❌ ไม่พบ private_key")
-        print(f"✅ private_key (Raw): {repr(private_key)}")
+        
+        # 🔥 แก้ไขปัญหา Escape Character
+        service_account_info["private_key"] = service_account_info["private_key"].replace("\\n", "\n")
+
+        creds = service_account.Credentials.from_service_account_info(
+            service_account_info,
+            scopes=["https://www.googleapis.com/auth/drive"]
+        )
+
+        print("✅ GOOGLE_CREDENTIALS Loaded Successfully!")
+
     except json.JSONDecodeError as e:
         print(f"❌ JSON Decode Failed! {e}")
 else:
