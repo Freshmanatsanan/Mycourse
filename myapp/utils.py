@@ -144,30 +144,16 @@ else:
 
 import os
 import json
-from google.oauth2 import service_account
 
-# ✅ ลองโหลด GOOGLE_CREDENTIALS จาก Environment Variable
+# ดึงค่า GOOGLE_CREDENTIALS
 credentials_json = os.getenv("GOOGLE_CREDENTIALS")
 
 if credentials_json:
     try:
         service_account_info = json.loads(credentials_json)
-
-        # ✅ ตรวจสอบค่า private_key
-        if "private_key" in service_account_info:
-            print(f"🔍 ตรวจสอบค่า private_key: {service_account_info['private_key'][:50]}...")  # พิมพ์เฉพาะ 50 ตัวแรกเพื่อดูว่ามีข้อมูลจริงไหม
-
-        # ✅ สร้างไฟล์ชั่วคราวเพื่อเก็บ JSON Credentials
-        temp_file_path = "/tmp/service_account.json"
-        with open(temp_file_path, "w") as temp_file:
-            json.dump(service_account_info, temp_file)
-
-        # ✅ โหลด Credentials จากไฟล์แทนจาก Dictionary
-        creds = service_account.Credentials.from_service_account_file(temp_file_path, scopes=["https://www.googleapis.com/auth/drive"])
-        print("✅ ใช้งาน Credentials จากไฟล์ได้สำเร็จ!")
-
+        print("✅ GOOGLE_CREDENTIALS Loaded Successfully!")
+        print("🔍 ตรวจสอบค่า private_key:", service_account_info.get("private_key", "❌ ไม่พบ private_key"))
     except json.JSONDecodeError as e:
         print(f"❌ Error: JSON Decode Failed! {e}")
 else:
     print("❌ GOOGLE_CREDENTIALS Not Found!")
-
