@@ -758,18 +758,24 @@ def login_api(request):
     except User.DoesNotExist:
         return Response({'error': 'ไม่พบผู้ใช้งานในระบบ'}, status=status.HTTP_404_NOT_FOUND)
     
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_approved_courses(request):
     """
-    ✅ API ดึงคอร์สที่ได้รับอนุมัติ (ทั้งคอร์สจองและคอร์สวิดีโอ) เหมือน `home()`
+    ✅ API ดึงคอร์สที่ได้รับอนุมัติ (ทั้งคอร์สจองและคอร์สวิดีโอ) พร้อมดึง URL รูปภาพแบนเนอร์
     """
     try:
         query = request.GET.get('q', '').strip()
 
-        # ✅ ดึงแบนเนอร์ที่ได้รับอนุมัติ
+        # ✅ ดึงแบนเนอร์ที่ได้รับอนุมัติ พร้อมสร้าง URL รูปภาพ
         banners = Banner.objects.filter(status="approved").values("id", "image")
+        banners_data = [
+            {
+                "id": banner["id"],
+                "image_url": request.build_absolute_uri(banner["image"]) if banner["image"] else None
+            }
+            for banner in banners
+        ]
 
         # ✅ ดึงคอร์สจองที่ได้รับอนุมัติและยังเปิดรับสมัคร
         approved_courses = Course.objects.filter(status='approved', is_closed=False).values(
@@ -817,13 +823,14 @@ def get_approved_courses(request):
         ]
 
         return Response({
-            "banners": list(banners),
+            "banners": banners_data,  # ✅ แบนเนอร์ที่มี `image_url`
             "courses": courses_data,
             "video_courses": video_courses_data
         }, status=200)
     
     except Exception as e:
         return Response({'error': str(e)}, status=400)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])  # อนุญาตให้ทุกคนเข้าถึง API นี้
