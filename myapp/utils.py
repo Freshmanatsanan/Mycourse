@@ -126,17 +126,18 @@ def grant_access_to_user(file_id, user_email):
 
 
 
-import os
 import json
+import os
 
 credentials_json = os.getenv("GOOGLE_CREDENTIALS")
 
 if credentials_json:
     try:
         service_account_info = json.loads(credentials_json)
-        print("✅ GOOGLE_CREDENTIALS Loaded Successfully!")
-        print("🔍 ตรวจสอบค่า private_key:", service_account_info.get("private_key", "❌ ไม่พบ private_key"))
+        private_key = service_account_info.get("private_key", "❌ ไม่พบ private_key")
+        print(f"✅ private_key (Raw): {repr(private_key)}")
     except json.JSONDecodeError as e:
-        print(f"❌ Error: JSON Decode Failed! {e}")
+        print(f"❌ JSON Decode Failed! {e}")
 else:
     print("❌ GOOGLE_CREDENTIALS Not Found!")
+
