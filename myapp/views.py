@@ -758,72 +758,68 @@ def login_api(request):
     except User.DoesNotExist:
         return Response({'error': 'ไม่พบผู้ใช้งานในระบบ'}, status=status.HTTP_404_NOT_FOUND)
     
+
+from django.conf import settings
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_approved_courses(request):
-    """
-    ✅ API ดึงคอร์สที่ได้รับอนุมัติ (ทั้งคอร์สจองและคอร์สวิดีโอ) พร้อมดึง URL รูปภาพแบนเนอร์
-    """
     try:
         query = request.GET.get('q', '').strip()
 
-        # ✅ ดึงแบนเนอร์ที่ได้รับอนุมัติ พร้อมสร้าง URL รูปภาพ
+        # ✅ ดึงแบนเนอร์ที่ได้รับอนุมัติ
         banners = Banner.objects.filter(status="approved").values("id", "image")
-        banners_data = [
-            {
-                "id": banner["id"],
-                "image_url": request.build_absolute_uri(banner["image"]) if banner["image"] else None
-            }
-            for banner in banners
-        ]
 
-        # ✅ ดึงคอร์สจองที่ได้รับอนุมัติและยังเปิดรับสมัคร
+        # ✅ ดึงคอร์สที่ได้รับอนุมัติ
         approved_courses = Course.objects.filter(status='approved', is_closed=False).values(
             "id", "title", "price", "image", "instructor"
         )
 
-        # ✅ ดึงคอร์สวิดีโอที่ได้รับอนุมัติ
         approved_video_courses = VideoCourse.objects.filter(status='approved').values(
             "id", "title", "price", "image", "instructor"
         )
 
-        # ✅ กรองผลลัพธ์ตามคำค้นหา
-        if query:
-            approved_courses = approved_courses.filter(
-                Q(title__icontains=query) | Q(description__icontains=query)
-            )
-            approved_video_courses = approved_video_courses.filter(
-                Q(title__icontains=query) | Q(description__icontains=query)
-            )
+        # ✅ ฟังก์ชันสร้าง URL รูปภาพให้ถูกต้อง
+        def get_image_url(image_path):
+            if image_path:
+                return request.build_absolute_uri(f"{settings.MEDIA_URL}{image_path}")
+            return None
 
-        # ✅ แปลงข้อมูลคอร์สจองเป็น JSON
+        # ✅ แปลงข้อมูลคอร์สเป็น JSON
         courses_data = [
             {
                 "id": course["id"],
                 "title": course["title"],  
                 "price": course["price"],
-                "image_url": request.build_absolute_uri(course["image"]) if course["image"] else None,
+                "image_url": get_image_url(course["image"]),  # ✅ ใช้ฟังก์ชันแก้ไข URL
                 "instructor": course["instructor"],
                 "type": "คอร์สจอง"
             }
             for course in approved_courses
         ]
 
-        # ✅ แปลงข้อมูลคอร์สวิดีโอเป็น JSON
         video_courses_data = [
             {
                 "id": course["id"],
                 "title": course["title"],  
                 "price": course["price"],
-                "image_url": request.build_absolute_uri(course["image"]) if course["image"] else None,
+                "image_url": get_image_url(course["image"]),  # ✅ ใช้ฟังก์ชันแก้ไข URL
                 "instructor": course["instructor"],
                 "type": "คอร์สวิดีโอ"
             }
             for course in approved_video_courses
         ]
 
+        banners_data = [
+            {
+                "id": banner["id"],
+                "image_url": get_image_url(banner["image"]),  # ✅ แก้ URL
+            }
+            for banner in banners
+        ]
+
         return Response({
-            "banners": banners_data,  # ✅ แบนเนอร์ที่มี `image_url`
+            "banners": banners_data,
             "courses": courses_data,
             "video_courses": video_courses_data
         }, status=200)
