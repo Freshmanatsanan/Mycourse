@@ -35,7 +35,7 @@ from django.core.files.storage import FileSystemStorage
 from .models import CourseBooking
 from django.db.models import Count
 from django.core.paginator import Paginator
-from .serializers import CourseDetailsSerializer, AddCourseSerializer ,BannerSerializer
+from .serializers import CourseDetailsSerializer, AddCourseSerializer ,BannerSerializer,VideoCourseOrderSerializer 
 from myapp.serializers import CourseBookingSerializer
 from django.contrib import messages
 from django.core.mail import send_mail
@@ -2216,18 +2216,32 @@ def api_user_bookings(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_courses_api(request):
-    """API สำหรับดึงคอร์สที่ผู้ใช้จอง (เฉพาะของตนเอง)"""
+    """API สำหรับดึงคอร์สที่ผู้ใช้จอง และคอร์สวิดีโอที่ซื้อ"""
+    
+    # ✅ ดึงข้อมูลคอร์สที่จอง
     bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
-
     response_data = []
+
     for booking in bookings:
         course_data = CourseSerializer(booking.course, context={'request': request}).data
         booking_data = CourseBookingSerializer(booking, context={'request': request}).data
-        booking_data["course"] = course_data  # ✅ เพิ่มข้อมูลคอร์สเข้าไป
+        booking_data["course"] = course_data
+        booking_data["type"] = "live_course"  # ✅ เพิ่มประเภทคอร์ส
         response_data.append(booking_data)
 
-    return Response(response_data)
+    # ✅ ดึงข้อมูลคอร์สวิดีโอที่ซื้อ
+    purchased_video_courses = VideoCourseOrder.objects.filter(user=request.user).order_by("-payment_date")
 
+    for video_course in purchased_video_courses:
+        video_course_data = VideoCourseOrderSerializer(video_course, context={'request': request}).data
+        response_data.append({
+            "id": video_course.id,
+            "type": "video_course",  # ✅ เพิ่มประเภทคอร์สวิดีโอ
+            "video_course": video_course_data,
+            "purchased_date": video_course.payment_date,
+        })
+
+    return Response(response_data)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

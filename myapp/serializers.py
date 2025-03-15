@@ -7,6 +7,7 @@ from django.utils.timezone import localtime
 from .models import InstructorProfile
 from .models import Banner
 from django.conf import settings
+from .models import VideoCourseOrder, VideoCourse
 
 def get_booking_date(self, obj):
     if obj.booking_date:
@@ -188,3 +189,17 @@ class CourseSerializer(serializers.ModelSerializer):
         if obj.image:
             return self.context['request'].build_absolute_uri(obj.image.url)
         return None
+    
+
+
+class VideoCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VideoCourse
+        fields = ['id', 'title', 'description', 'price', 'image', 'instructor']
+
+class VideoCourseOrderSerializer(serializers.ModelSerializer):
+    course = VideoCourseSerializer(read_only=True)  # ดึงข้อมูลคอร์สวิดีโอแบบเต็ม
+
+    class Meta:
+        model = VideoCourseOrder
+        fields = ['id', 'user', 'course', 'payment_slip', 'payment_status', 'transaction_id', 'payment_date']
