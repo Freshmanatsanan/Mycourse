@@ -759,7 +759,34 @@ def login_api(request):
         return Response({'error': 'ไม่พบผู้ใช้งานในระบบ'}, status=status.HTTP_404_NOT_FOUND)
     
 
-from django.conf import settings
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_video_course_details(request, course_id):
+    """ API ดึงรายละเอียดของคอร์สเรียนแบบวิดีโอ """
+    try:
+        course = get_object_or_404(VideoCourse, id=course_id)
+        course_details = get_object_or_404(VideoCourseDetails, course=course)
+
+        data = {
+            "id": course.id,
+            "title": course.title,
+            "price": course.price,
+            "image_url": request.build_absolute_uri(course.image.url) if course.image else None,
+            "instructor": course.instructor,
+            "description": course_details.description,
+            "additional_description": course_details.additional_description,
+            "preview_video_url": request.build_absolute_uri(course_details.preview_video.url) if course_details.preview_video else None,
+            "image_left_url": request.build_absolute_uri(course_details.image.url) if course_details.image else None,
+            "image_right_url": request.build_absolute_uri(course_details.additional_image.url) if course_details.additional_image else None,
+        }
+
+        return Response(data, status=200)
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

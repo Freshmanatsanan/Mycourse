@@ -180,6 +180,8 @@ urlpatterns = [
     path("api/request-reset-password/", views.request_reset_password_api, name="request_reset_password_api"),
     path("api/verify-reset-password/", views.verify_reset_password_api, name="verify_reset_password_api"),
     path("api/reset-password/", views.reset_password_api, name="reset_password_api"),
+    path('api/video-course/<int:course_id>/', views.get_video_course_details, name='get_video_course_details'),
+
 
 
 
