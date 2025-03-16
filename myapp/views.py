@@ -520,6 +520,50 @@ def video_lesson_view(request, course_id):
         'lessons': lessons
     })
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated]) 
+def get_video_lessons(request, course_id):
+    """
+    API สำหรับดึงข้อมูลวิดีโอการสอน และเอกสารประกอบการเรียน
+    เฉพาะผู้ที่ซื้อคอร์สแล้วและได้รับการอนุมัติ
+    """
+    # ดึงคอร์สเรียนแบบวิดีโอ
+    course = get_object_or_404(VideoCourse, id=course_id)
+
+    # ตรวจสอบว่าผู้ใช้ซื้อคอร์สนี้และได้รับการอนุมัติแล้วหรือไม่
+    order = VideoCourseOrder.objects.filter(user=request.user, course=course, payment_status='confirmed').first()
+
+    if not order:
+        return HttpResponseForbidden("คุณต้องทำการซื้อคอร์สนี้ก่อนถึงจะสามารถดูได้")
+
+    # ดึงบทเรียนทั้งหมดที่เกี่ยวข้องกับคอร์สนี้
+    lessons = VideoLesson.objects.filter(course=course, status="approved")
+
+    lesson_data = []
+    for lesson in lessons:
+        # ดึง URL ของวิดีโอจาก Google Drive หรือใช้ URL ปกติ
+        video_url = f"https://drive.google.com/uc?id={lesson.google_drive_id}" if lesson.google_drive_id else None
+
+        lesson_data.append({
+            "id": lesson.id,
+            "title": lesson.title,
+            "description": lesson.description,
+            "video_url": video_url,
+            "duration": lesson.duration,
+            "document": lesson.document.url if lesson.document else None,  # ✅ ดึง URL เอกสารจาก `VideoLesson`
+        })
+
+    return JsonResponse({
+        "course": {
+            "id": course.id,
+            "title": course.title,
+            "description": course.description,
+            "price": course.price,
+            "image": course.image.url if course.image else None,
+            "instructor": course.instructor,
+        },
+        "lessons": lesson_data
+    })
 @login_required
 def video_order_detail_instructor(request, course_id):
     # ดึงคอร์สเรียนที่เลือก

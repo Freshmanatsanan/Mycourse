@@ -181,6 +181,7 @@ urlpatterns = [
     path("api/verify-reset-password/", views.verify_reset_password_api, name="verify_reset_password_api"),
     path("api/reset-password/", views.reset_password_api, name="reset_password_api"),
     path('api/video-course/<int:course_id>/', views.get_video_course_details, name='get_video_course_details'),
+    path('api/video-lesson-view/<int:course_id>/', views.get_video_lessons, name='get_video_lessons'),
 
 
 
