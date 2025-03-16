@@ -527,22 +527,26 @@ def get_video_lessons(request, course_id):
     API สำหรับดึงข้อมูลวิดีโอการสอน และเอกสารประกอบการเรียน
     เฉพาะผู้ที่ซื้อคอร์สแล้วและได้รับการอนุมัติ
     """
-    # ดึงคอร์สเรียนแบบวิดีโอ
+    # ดึงคอร์สเรียน
     course = get_object_or_404(VideoCourse, id=course_id)
 
-    # ตรวจสอบว่าผู้ใช้ซื้อคอร์สนี้และได้รับการอนุมัติแล้วหรือไม่
+    # ตรวจสอบสิทธิ์การเข้าถึงคอร์ส
     order = VideoCourseOrder.objects.filter(user=request.user, course=course, payment_status='confirmed').first()
-
     if not order:
         return HttpResponseForbidden("คุณต้องทำการซื้อคอร์สนี้ก่อนถึงจะสามารถดูได้")
 
-    # ดึงบทเรียนทั้งหมดที่เกี่ยวข้องกับคอร์สนี้
+    # ดึงบทเรียนทั้งหมด
     lessons = VideoLesson.objects.filter(course=course, status="approved")
 
     lesson_data = []
     for lesson in lessons:
-        # ดึง URL ของวิดีโอจาก Google Drive หรือใช้ URL ปกติ
-        video_url = f"https://drive.google.com/uc?id={lesson.google_drive_id}" if lesson.google_drive_id else None
+        video_url = None
+        if lesson.google_drive_id:
+            # ✅ ให้สิทธิ์ผู้ใช้ในการเข้าถึงไฟล์
+            grant_access_to_user(lesson.google_drive_id, request.user.email)
+
+            # ✅ ใช้ URL ที่เหมาะกับการเล่นใน React Native (WebView)
+            video_url = f"https://drive.google.com/uc?id={lesson.google_drive_id}&export=download"
 
         lesson_data.append({
             "id": lesson.id,
@@ -550,7 +554,7 @@ def get_video_lessons(request, course_id):
             "description": lesson.description,
             "video_url": video_url,
             "duration": lesson.duration,
-            "document": lesson.document.url if lesson.document else None,  # ✅ ดึง URL เอกสารจาก `VideoLesson`
+            "document": lesson.document.url if lesson.document else None,  
         })
 
     return JsonResponse({
