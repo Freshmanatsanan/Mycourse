@@ -74,6 +74,7 @@ import requests
 from django.shortcuts import render
 from django.http import HttpResponseForbidden
 from .utils import grant_access_to_user  # ถ้า grant_access_to_user อยู่ในไฟล์ utils.py
+from django.core.files.storage import default_storage
 
 
 # ใส่ API Key ของคุณจาก Google Cloud
@@ -469,6 +470,47 @@ def purchase_video_course(request, course_id):
         return redirect("my_courses")  # ไปยังหน้าคอร์สของฉัน
 
     return render(request, "purchase_video_course.html", {"course": course})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def purchase_video_course_api(request, course_id):
+    """
+    API สำหรับซื้อคอร์สเรียนแบบวิดีโอ
+    """
+    course = get_object_or_404(VideoCourse, id=course_id)
+
+    # ตรวจสอบว่าผู้ใช้ซื้อคอร์สนี้ไปแล้วหรือยัง
+    existing_order = VideoCourseOrder.objects.filter(user=request.user, course=course).first()
+    if existing_order:
+        return Response({"error": "คุณได้ซื้อคอร์สนี้ไปแล้ว"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # ตรวจสอบว่ามีสลิปการโอนเงินหรือไม่
+    if "payment_slip" not in request.FILES:
+        return Response({"error": "⚠ กรุณาอัปโหลดสลิปการโอนเงิน"}, status=status.HTTP_400_BAD_REQUEST)
+
+    payment_slip = request.FILES["payment_slip"]
+
+    # บันทึกไฟล์สลิปการโอนเงิน
+    file_path = f"payment_slips/{payment_slip.name}"
+    saved_path = default_storage.save(file_path, ContentFile(payment_slip.read()))
+
+    # สร้างคำสั่งซื้อ
+    order = VideoCourseOrder.objects.create(
+        user=request.user,
+        course=course,
+        payment_slip=saved_path,  # เก็บ path ของสลิป
+        payment_status="pending",  # รอแอดมินอนุมัติ
+    )
+
+    return Response(
+        {
+            "message": "✅ คำสั่งซื้อของคุณถูกบันทึกแล้ว กรุณารอการตรวจสอบจากแอดมิน",
+            "order_id": order.id,
+            "payment_slip_url": request.build_absolute_uri(default_storage.url(saved_path)),
+        },
+        status=status.HTTP_201_CREATED,
+    )
 
 def video_order_detail(request, order_id):
     """ แสดงรายละเอียดผู้ซื้อคอร์สเรียนแบบวิดีโอ """
