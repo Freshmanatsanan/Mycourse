@@ -470,8 +470,7 @@ def purchase_video_course(request, course_id):
         return redirect("my_courses")  # ไปยังหน้าคอร์สของฉัน
 
     return render(request, "purchase_video_course.html", {"course": course})
-
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def purchase_video_course_api(request, course_id):
     """
@@ -479,42 +478,56 @@ def purchase_video_course_api(request, course_id):
     """
     course = get_object_or_404(VideoCourse, id=course_id)
 
-    # ตรวจสอบว่าผู้ใช้ซื้อคอร์สนี้ไปแล้วหรือยัง
-    existing_order = VideoCourseOrder.objects.filter(user=request.user, course=course).first()
-    if existing_order:
-        return Response({"error": "คุณได้ซื้อคอร์สนี้ไปแล้ว"}, status=status.HTTP_400_BAD_REQUEST)
-
-    # ตรวจสอบว่ามีสลิปการโอนเงินหรือไม่
-    if "payment_slip" not in request.FILES:
-        return Response({"error": "⚠ กรุณาอัปโหลดสลิปการโอนเงิน"}, status=status.HTTP_400_BAD_REQUEST)
-
-    payment_slip = request.FILES["payment_slip"]
-
-    # บันทึกไฟล์สลิปการโอนเงิน
-    file_path = f"payment_slips/{payment_slip.name}"
-    saved_path = default_storage.save(file_path, ContentFile(payment_slip.read()))
-
-    # สร้างคำสั่งซื้อ
-    order = VideoCourseOrder.objects.create(
-        user=request.user,
-        course=course,
-        payment_slip=saved_path,  # เก็บ path ของสลิป
-        payment_status="pending",  # รอแอดมินอนุมัติ
-    )
-
-    # ✅ ดึง QR Code ของคอร์สเรียนจาก Model
+    # ✅ ดึง QR Code URL ทันทีเมื่อเข้า API
     qr_code_url = request.build_absolute_uri(course.payment_qr.url) if course.payment_qr else None
 
-    return Response(
-        {
-            "message": "✅ คำสั่งซื้อของคุณถูกบันทึกแล้ว กรุณารอการตรวจสอบจากแอดมิน",
-            "order_id": order.id,
-            "payment_slip_url": request.build_absolute_uri(default_storage.url(saved_path)),
-            "qr_code_url": qr_code_url,  # ✅ เพิ่ม QR Code URL สำหรับการชำระเงิน
-        },
-        status=status.HTTP_201_CREATED,
-    )
+    if request.method == "GET":
+        # ✅ ส่งข้อมูลคอร์ส + QR Code ไปแสดงก่อน
+        return Response(
+            {
+                "course_id": course.id,
+                "title": course.title,
+                "description": course.description,
+                "price": course.price,
+                "image_url": request.build_absolute_uri(course.image.url) if course.image else None,
+                "qr_code_url": qr_code_url,
+            },
+            status=status.HTTP_200_OK,
+        )
 
+    if request.method == "POST":
+        # ตรวจสอบว่าผู้ใช้ซื้อคอร์สนี้ไปแล้วหรือยัง
+        existing_order = VideoCourseOrder.objects.filter(user=request.user, course=course).first()
+        if existing_order:
+            return Response({"error": "คุณได้ซื้อคอร์สนี้ไปแล้ว"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ตรวจสอบว่ามีสลิปการโอนเงินหรือไม่
+        if "payment_slip" not in request.FILES:
+            return Response({"error": "⚠ กรุณาอัปโหลดสลิปการโอนเงิน"}, status=status.HTTP_400_BAD_REQUEST)
+
+        payment_slip = request.FILES["payment_slip"]
+
+        # บันทึกไฟล์สลิปการโอนเงิน
+        file_path = f"payment_slips/{payment_slip.name}"
+        saved_path = default_storage.save(file_path, ContentFile(payment_slip.read()))
+
+        # สร้างคำสั่งซื้อ
+        order = VideoCourseOrder.objects.create(
+            user=request.user,
+            course=course,
+            payment_slip=saved_path,  # เก็บ path ของสลิป
+            payment_status="pending",  # รอแอดมินอนุมัติ
+        )
+
+        return Response(
+            {
+                "message": "✅ คำสั่งซื้อของคุณถูกบันทึกแล้ว กรุณารอการตรวจสอบจากแอดมิน",
+                "order_id": order.id,
+                "payment_slip_url": request.build_absolute_uri(default_storage.url(saved_path)),
+                "qr_code_url": qr_code_url,  # ✅ ส่ง QR Code พร้อมกันเลย
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 def video_order_detail(request, order_id):
     """ แสดงรายละเอียดผู้ซื้อคอร์สเรียนแบบวิดีโอ """
