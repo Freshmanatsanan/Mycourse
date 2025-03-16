@@ -187,6 +187,36 @@ def video_courses(request):
     courses = VideoCourse.objects.all()  # ดึงข้อมูลคอร์สเรียนแบบวิดีโอทั้งหมด
     return render(request, "instructor/video_courses.html", {"courses": courses})
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def video_courses_api(request):
+    """
+    API สำหรับดึงรายการคอร์สเรียนแบบวิดีโอ รวมถึงข้อความการแก้ไข
+    """
+    try:
+        courses = VideoCourse.objects.all()
+
+        course_data = [
+            {
+                "id": course.id,
+                "title": course.title,
+                "description": course.description,
+                "price": float(course.price),  # แปลง Decimal เป็น float
+                "image_url": request.build_absolute_uri(course.image.url) if course.image else None,
+                "instructor": course.instructor,
+                "status": course.status,
+                "revision_message": course.revision_message if course.revision_message else None,  # ✅ แสดงข้อความแก้ไข
+                "created_at": course.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "payment_qr": request.build_absolute_uri(course.payment_qr.url) if course.payment_qr else None,
+            }
+            for course in courses
+        ]
+
+        return Response({"courses": course_data}, status=200)
+
+    except Exception as e:
+        return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
+
 @login_required
 def video_course_details(request, course_id):
     course = get_object_or_404(VideoCourse, id=course_id)

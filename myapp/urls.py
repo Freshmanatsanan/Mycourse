@@ -184,6 +184,7 @@ urlpatterns = [
     path('api/video-lesson-view/<int:course_id>/', views.get_video_lessons, name='get_video_lessons'),
     path("api/purchase-video-course-api/<int:course_id>/", views.purchase_video_course_api, name="purchase_video_course_api"),
     path("api/video-order-detail-instructor/<int:course_id>/", views.video_order_detail_instructor_api, name="video_order_detail_instructor_api"),
+    path("api/video-courses/", views.video_courses_api, name="video_courses_api"),
 
 
 
