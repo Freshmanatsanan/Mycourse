@@ -639,6 +639,43 @@ def video_order_detail_instructor(request, course_id):
         'course': course,
         'orders': orders,
     })
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def video_order_detail_instructor_api(request, course_id):
+    """
+    API สำหรับดึงข้อมูลผู้ซื้อคอร์สเรียนแบบวิดีโอ สำหรับ Instructor
+    """
+    try:
+        # ✅ ดึงคอร์สเรียนที่ Instructor ต้องการดู
+        course = get_object_or_404(VideoCourse, id=course_id)
+
+        # ✅ ดึงคำสั่งซื้อที่เกี่ยวข้องกับคอร์สนี้
+        orders = VideoCourseOrder.objects.filter(course=course).select_related("user")
+
+        # ✅ จัดรูปแบบข้อมูลก่อนส่งกลับ
+        data = {
+            "course_id": course.id,
+            "course_title": course.title,
+            "total_orders": orders.count(),
+            "orders": [
+                {
+                    "order_id": order.id,
+                    "buyer_name": order.user.get_full_name() if order.user.get_full_name() else order.user.username,
+                    "email": order.user.email,
+                    "payment_status": order.payment_status,
+                    "payment_slip": request.build_absolute_uri(order.payment_slip.url) if order.payment_slip else None,
+                    "transaction_id": order.transaction_id,
+                    "payment_date": order.payment_date.strftime("%Y-%m-%d %H:%M:%S"),
+                }
+                for order in orders
+            ]
+        }
+
+        return Response(data, status=200)
+
+    except Exception as e:
+        return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
 #--------------------------------------------------------------------------------
 def register(request):
     if request.method == 'POST':    
