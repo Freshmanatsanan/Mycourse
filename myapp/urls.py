@@ -182,7 +182,7 @@ urlpatterns = [
     path("api/reset-password/", views.reset_password_api, name="reset_password_api"),
     path('api/video-course/<int:course_id>/', views.get_video_course_details, name='get_video_course_details'),
     path('api/video-lesson-view/<int:course_id>/', views.get_video_lessons, name='get_video_lessons'),
-    path("api/purchase-video-course/<int:course_id>/", views.purchase_video_course_api, name="purchase_video_course"),
+    path("api/purchase-video-course-api/<int:course_id>/", views.purchase_video_course_api, name="purchase_video_course_api"),
 
 
 
