@@ -1046,8 +1046,10 @@ def instructor_sales_api(request):
         # ✅ หา CourseDetails ที่เกี่ยวข้อง
         course_details_dict = {cd.course_id: cd for cd in CourseDetails.objects.filter(course__in=booked_courses)}
 
-        # ✅ คอร์สวิดีโอที่มีการซื้อ (รวมจำนวนการซื้อ)
-        purchased_courses = CourseOrder.objects.values("course_name").annotate(purchase_count=Count("id"))
+        # ✅ คอร์สเรียนวิดีโอที่มีการซื้อ (รวมจำนวนการซื้อ)
+        purchased_courses = VideoCourse.objects.filter(
+            id__in=VideoCourseOrder.objects.values("course_id")
+        ).annotate(purchase_count=Count("videocourseorder"))
 
         # ✅ จัดรูปแบบข้อมูลก่อนส่งกลับ
         data = {
@@ -1059,7 +1061,7 @@ def instructor_sales_api(request):
                     "booking_count": course.booking_count,
                     "course_image": request.build_absolute_uri(course.image.url)
                     if course.image and hasattr(course.image, "url")
-                    else None,  
+                    else None,
                     "details": {
                         "course_title": course_details_dict[course.id].name if course.id in course_details_dict else "N/A",
                         "course_description": course_details_dict[course.id].description if course.id in course_details_dict else "N/A",
@@ -1070,10 +1072,15 @@ def instructor_sales_api(request):
             ],
             "purchased_courses": [
                 {
-                    "course_name": purchase["course_name"],
-                    "purchase_count": purchase["purchase_count"]
+                    "course_id": course.id,
+                    "course_name": course.title if course.title else "N/A",
+                    "purchase_count": course.purchase_count,
+                    "course_image": request.build_absolute_uri(course.image.url)
+                    if course.image and hasattr(course.image, "url")
+                    else None,
+                    "price": float(course.price) if course.price else 0.0,
                 }
-                for purchase in purchased_courses
+                for course in purchased_courses
             ]
         }
 
