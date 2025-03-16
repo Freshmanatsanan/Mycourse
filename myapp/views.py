@@ -471,12 +471,11 @@ def purchase_video_course(request, course_id):
 
     return render(request, "purchase_video_course.html", {"course": course})
 
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def purchase_video_course_api(request, course_id):
     """
-    API สำหรับซื้อคอร์สเรียนแบบวิดีโอ
+    API สำหรับซื้อคอร์สเรียนแบบวิดีโอ พร้อมแสดง QR Code สำหรับชำระเงิน
     """
     course = get_object_or_404(VideoCourse, id=course_id)
 
@@ -503,14 +502,19 @@ def purchase_video_course_api(request, course_id):
         payment_status="pending",  # รอแอดมินอนุมัติ
     )
 
+    # ✅ ดึง QR Code ของคอร์สเรียนจาก Model
+    qr_code_url = request.build_absolute_uri(course.payment_qr.url) if course.payment_qr else None
+
     return Response(
         {
             "message": "✅ คำสั่งซื้อของคุณถูกบันทึกแล้ว กรุณารอการตรวจสอบจากแอดมิน",
             "order_id": order.id,
             "payment_slip_url": request.build_absolute_uri(default_storage.url(saved_path)),
+            "qr_code_url": qr_code_url,  # ✅ เพิ่ม QR Code URL สำหรับการชำระเงิน
         },
         status=status.HTTP_201_CREATED,
     )
+
 
 def video_order_detail(request, order_id):
     """ แสดงรายละเอียดผู้ซื้อคอร์สเรียนแบบวิดีโอ """
