@@ -186,6 +186,10 @@ urlpatterns = [
     path("api/video-order-detail-instructor/<int:course_id>/", views.video_order_detail_instructor_api, name="video_order_detail_instructor_api"),
     path("api/video-courses/", views.video_courses_api, name="video_courses_api"),
 
+    path("api/add-video-course/", views.add_video_course_api, name="add_video_course_api"),
+    path("api/add-video-course-details/<int:course_id>/", views.add_video_course_details_api, name="add_video_course_details_api"),
+    path("api/add-video-lesson/<int:course_id>/", views.add_video_lesson_api, name="add_video_lesson_api"),
+
 
 
 

@@ -108,6 +108,125 @@ from .models import VideoLesson
 from .utils import upload_video_to_drive  # ฟังก์ชันอัปโหลดวิดีโอไป Google Drive
 from decimal import Decimal  # ✅ ต้อง import ก่อนใช้
 
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def add_video_course_api(request):
+    """
+    API สำหรับเพิ่มคอร์สเรียนแบบวิดีโอ
+    """
+    title = request.data.get("title")
+    description = request.data.get("description")
+    price = request.data.get("price")
+    instructor_name = request.data.get("instructor") 
+    image = request.FILES.get("image")
+
+    if not title or not description or not price or not image or not instructor_name:
+        return Response({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
+
+    course = VideoCourse.objects.create(
+        title=title,
+        description=description,
+        price=price,
+        image=image,
+        instructor=instructor_name,
+        added_by=request.user, 
+        status="pending"
+    )
+
+    return Response({
+        "message": "✅ คอร์สเรียนถูกสร้างแล้ว กรุณาเพิ่มรายละเอียดคอร์สต่อไป",
+        "course_id": course.id,
+        "next_step": reverse('add_video_course_details_api', kwargs={'course_id': course.id})
+    }, status=201)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def add_video_course_details_api(request, course_id):
+    """
+    API สำหรับเพิ่มรายละเอียดของคอร์สเรียนแบบวิดีโอ
+    """
+    course = get_object_or_404(VideoCourse, id=course_id)
+
+    name = request.data.get("name")
+    description = request.data.get("description")
+    additional_description = request.data.get("additional_description", "")
+    image = request.FILES.get("image")
+    additional_image = request.FILES.get("additional_image")
+    preview_video = request.FILES.get("preview_video")
+
+    if not name or not description or not image:
+        return Response({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
+
+    # ✅ บันทึกข้อมูลลงใน `VideoCourseDetails`
+    VideoCourseDetails.objects.create(
+        course=course,
+        name=name,
+        description=description,
+        additional_description=additional_description,
+        image=image,
+        additional_image=additional_image,
+        preview_video=preview_video
+    )
+
+    return Response({
+        "message": "✅ รายละเอียดคอร์สถูกเพิ่มแล้ว กรุณาเพิ่มวิดีโอบทเรียน",
+        "course_id": course.id,
+        "next_step": reverse('add_video_lesson_api', kwargs={'course_id': course.id})
+    }, status=201)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def add_video_lesson_api(request, course_id):
+    """
+    API สำหรับเพิ่มวิดีโอบทเรียนของคอร์สเรียน
+    """
+    course = get_object_or_404(VideoCourse, id=course_id)
+
+    title = request.data.get("title")
+    description = request.data.get("description")
+    duration = request.data.get("duration")
+    video_file = request.FILES.get("video_file")
+    document = request.FILES.get("document")
+
+    if not title or not description or not duration or not video_file:
+        return Response({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
+
+    # ✅ บันทึกไฟล์วิดีโอชั่วคราว
+    temp_file_path = os.path.join("media", video_file.name)
+    with open(temp_file_path, "wb+") as destination:
+        for chunk in video_file.chunks():
+            destination.write(chunk)
+    destination.close()
+
+    # ✅ อัปโหลดไป Google Drive
+    google_drive_id = upload_video_to_drive(temp_file_path, video_file.name, request.user.email)
+
+    # ✅ ลบไฟล์ชั่วคราว
+    try:
+        os.remove(temp_file_path)
+    except PermissionError:
+        print(f"❌ ไม่สามารถลบไฟล์: {temp_file_path}")
+
+    # ✅ บันทึกวิดีโอเข้า DB
+    VideoLesson.objects.create(
+        course=course,
+        title=title,
+        description=description,
+        google_drive_id=google_drive_id,
+        duration=duration,
+        instructor=request.user,
+        document=document
+    )
+
+    return Response({
+        "message": "✅ วิดีโอการสอนถูกเพิ่มแล้ว คอร์สเรียนจะถูกส่งไปให้แอดมินตรวจสอบ",
+        "course_id": course.id,
+        "status": "pending"
+    }, status=201)
+
 @login_required
 def add_video_lesson(request, course_id):
     course = get_object_or_404(VideoCourse, id=course_id)
