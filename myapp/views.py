@@ -602,6 +602,8 @@ def review_video_courses_api(request):
             "status": course.status,
             "revision_message": course.revision_message,
             "created_at": course.created_at,
+            "image_url": request.build_absolute_uri(course.image.url) if course.image else None  # ✅ ดึงรูปภาพมาแบบเต็ม
+
         }
         for course in courses
     ]
