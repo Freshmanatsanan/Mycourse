@@ -2061,37 +2061,45 @@ def update_booking_status_api(request, booking_id):
         status=status.HTTP_200_OK
     )
 
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])  # ✅ ต้องล็อกอินก่อนใช้งาน
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def admin_dashboard_api(request):
-    """ API ดึงข้อมูลรายได้รวมสำหรับ Mobile """
-
+    """ API สำหรับดึงข้อมูลสรุปรายได้รวม (สำหรับแอดมินในแอปมือถือ) """
+    
     today = datetime.today().date()
 
-    # ✅ คำนวณรายได้รวมทั้งหมด
+    # ✅ คำนวณจำนวนคอร์สที่ถูกจองและคอร์สวิดีโอที่ถูกซื้อ
     total_booking_courses = CourseBooking.objects.filter(booking_status="confirmed").count()
-    total_video_courses = CourseOrder.objects.filter(status="paid").count()
-    
+    total_video_courses = VideoCourseOrder.objects.filter(payment_status="confirmed").count()
+
+    # ✅ ดึงราคาคอร์สวิดีโอเพื่อนำไปคำนวณ
+    video_courses = VideoCourse.objects.values_list('id', 'price')
+    video_prices = {course_id: price for course_id, price in video_courses}
+
+    # ✅ คำนวณรายได้รวมจากทั้งสองประเภทคอร์ส
     total_income = (
         CourseBooking.objects.filter(booking_status="confirmed").aggregate(total=Sum('course__price'))['total'] or 0
     ) + (
-        sum(VideoCourse.objects.filter(name=order.course_name).first().price or 0
-            for order in CourseOrder.objects.filter(status="paid"))
+        sum(
+            video_prices.get(order.course_id, 0)
+            for order in VideoCourseOrder.objects.filter(payment_status="confirmed")
+        )
     )
 
+    # ✅ รายได้แยกตามประเภท
     booking_income = CourseBooking.objects.filter(booking_status="confirmed").aggregate(total=Sum('course__price'))['total'] or 0
     video_income = sum(
-        VideoCourse.objects.filter(name=order.course_name).first().price or 0
-        for order in CourseOrder.objects.filter(status="paid")
+        video_prices.get(order.course_id, 0)
+        for order in VideoCourseOrder.objects.filter(payment_status="confirmed")
     )
 
-    # ✅ ดึงรายได้จากคอร์สจอง
+    # ✅ รายได้จากแต่ละคอร์ส
     course_revenues = []
+
+    # ✅ รายได้จากคอร์สจอง
     courses = CourseBooking.objects.filter(booking_status="confirmed").values('course__title').annotate(
         total_income=Sum('course__price'), total_students=Count('id')
     )
-
     for course in courses:
         course_revenues.append({
             "title": course['course__title'],
@@ -2100,29 +2108,23 @@ def admin_dashboard_api(request):
             "revenue": course['total_income']
         })
 
-    # ✅ ดึงรายได้จากคอร์สวิดีโอ
-    video_courses = VideoCourse.objects.values_list('name', 'price')
-    video_prices = {name: price for name, price in video_courses}
-
-    video_revenues = CourseOrder.objects.filter(status="paid").values('course_name').annotate(
-        total_students=Count('course_name')
+    # ✅ รายได้จากคอร์สวิดีโอ
+    video_revenues = VideoCourseOrder.objects.filter(payment_status="confirmed").values('course_id').annotate(
+        total_students=Count('course_id')
     )
-
     for course in video_revenues:
         course_revenues.append({
-            "title": course['course_name'],
+            "title": VideoCourse.objects.get(id=course['course_id']).title,
             "type": "คอร์สวิดีโอ",
             "total_students": course['total_students'],
-            "revenue": video_prices.get(course['course_name'], 0) * course['total_students']
+            "revenue": video_prices.get(course['course_id'], 0) * course['total_students']
         })
 
-    # ✅ ดึงรายได้แยกตามเดือน
+    # ✅ รายได้แยกตามเดือน
     monthly_income = []
-    thai_months = [
-        "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
-        "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
-    ]
-
+    thai_months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+                   "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+    
     for month in range(1, 13):
         monthly_booking = CourseBooking.objects.filter(
             booking_status="confirmed",
@@ -2130,10 +2132,8 @@ def admin_dashboard_api(request):
         ).aggregate(total=Sum('course__price'))['total'] or 0
 
         monthly_video = sum(
-            video_prices.get(order.course_name, 0) * order.total_students
-            for order in CourseOrder.objects.filter(status="paid", order_date__month=month)
-            .values('course_name')
-            .annotate(total_students=Count('course_name'))
+            video_prices.get(order.course_id, 0)
+            for order in VideoCourseOrder.objects.filter(payment_status="confirmed", payment_date__month=month)
         )
 
         monthly_total = monthly_booking + monthly_video
@@ -2151,6 +2151,8 @@ def admin_dashboard_api(request):
         "course_revenues": course_revenues,
         "monthly_income": monthly_income,
     })
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def course_revenue_api(request):
@@ -2186,21 +2188,17 @@ def course_revenue_api(request):
 
     return Response({"course_revenues": course_revenues})
 
-
-
-@api_view(["GET"])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def monthly_income_api(request):
-    """ API ดึงข้อมูลรายได้แยกตามเดือน """
+    """ API สำหรับดึงข้อมูลรายได้แยกตามเดือน """
 
     monthly_income = []
-    thai_months = [
-        "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
-        "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
-    ]
+    thai_months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+                   "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
 
-    video_courses = VideoCourse.objects.values_list('name', 'price')
-    video_prices = {name: price for name, price in video_courses}
+    video_courses = VideoCourse.objects.values_list('id', 'price')
+    video_prices = {course_id: price for course_id, price in video_courses}
 
     for month in range(1, 13):
         monthly_booking = CourseBooking.objects.filter(
@@ -2209,10 +2207,8 @@ def monthly_income_api(request):
         ).aggregate(total=Sum('course__price'))['total'] or 0
 
         monthly_video = sum(
-            video_prices.get(order.course_name, 0) * order.total_students
-            for order in CourseOrder.objects.filter(status="paid", order_date__month=month)
-            .values('course_name')
-            .annotate(total_students=Count('course_name'))
+            video_prices.get(order.course_id, 0)
+            for order in VideoCourseOrder.objects.filter(payment_status="confirmed", payment_date__month=month)
         )
 
         monthly_total = monthly_booking + monthly_video
