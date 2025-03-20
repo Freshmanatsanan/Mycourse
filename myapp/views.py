@@ -767,7 +767,75 @@ def reject_video_order(request, order_id):
     order.save()
     messages.error(request, "❌ ปฏิเสธการชำระเงินแล้ว!")
     return redirect('video_order_detail', order.course.id)
+#----------------------------------------------------api---------------------------------------------------------------------------------
 
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def video_order_detail_api(request, course_id):
+    """
+    API สำหรับดึงรายละเอียดผู้ซื้อคอร์สเรียนแบบวิดีโอ
+    """
+    course = get_object_or_404(VideoCourse, id=course_id)
+    orders = VideoCourseOrder.objects.filter(course=course)
+
+    # ✅ จัดรูปแบบข้อมูลให้ JSON
+    orders_data = [
+        {
+            "order_id": order.id,
+            "user": order.user.username,  # ✅ ชื่อผู้ซื้อ
+            "email": order.user.email,  # ✅ อีเมลผู้ซื้อ
+            "payment_status": order.payment_status,  # ✅ สถานะการชำระเงิน
+            "payment_date": order.payment_date.strftime("%Y-%m-%d %H:%M:%S") if order.payment_date else None,
+            "price": float(order.course.price) if order.course.price else 0.0,
+            "course_title": order.course.title,
+            "course_image": request.build_absolute_uri(order.course.image.url) if order.course.image else None
+        }
+        for order in orders
+    ]
+
+    return Response({
+        "course_id": course.id,
+        "course_title": course.title,
+        "course_image": request.build_absolute_uri(course.image.url) if course.image else None,
+        "orders": orders_data,
+    }, status=200)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def confirm_video_order_api(request, order_id):
+    """
+    ✅ API อนุมัติการชำระเงินคอร์สเรียนแบบวิดีโอ
+    """
+    order = get_object_or_404(VideoCourseOrder, id=order_id)
+    order.payment_status = 'confirmed'
+    order.save()
+    
+    return Response({
+        "message": "✅ อนุมัติการชำระเงินเรียบร้อยแล้ว!",
+        "order_id": order.id,
+        "status": order.payment_status
+    }, status=200)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def reject_video_order_api(request, order_id):
+    """
+    ❌ API ปฏิเสธการชำระเงินคอร์สเรียนแบบวิดีโอ
+    """
+    order = get_object_or_404(VideoCourseOrder, id=order_id)
+    order.payment_status = 'rejected'
+    order.save()
+    
+    return Response({
+        "message": "❌ ปฏิเสธการชำระเงินแล้ว!",
+        "order_id": order.id,
+        "status": order.payment_status
+    }, status=200)
+
+#----------------------------------------------------------------------------------------------------------------------------------------
 @login_required
 def video_lesson_view(request, course_id):
     # ดึงคอร์สเรียนแบบวิดีโอ

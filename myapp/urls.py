@@ -202,6 +202,15 @@ urlpatterns = [
     # ✅ อัปโหลด QR Code สำหรับชำระเงิน
     path("api/upload-video-course-qr/<int:course_id>/", views.upload_video_course_qr_api, name="upload_video_course_qr_api"),
 
+    # ดึงข้อมูลคำสั่งซื้อคอร์สเรียนแบบวิดีโอ
+    path('api/video-order-detail/<int:course_id>/', views.video_order_detail_api, name='video_order_detail'),
+    
+    # อนุมัติการชำระเงิน
+    path('api/confirm-video-order/<int:order_id>/', views.confirm_video_order_api, name='confirm_video_order'),
+    
+    # ปฏิเสธการชำระเงิน
+    path('api/reject-video-order/<int:order_id>/', views.reject_video_order_api, name='reject_video_order'),
+
 
 
 
