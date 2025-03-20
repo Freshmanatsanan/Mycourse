@@ -1781,6 +1781,7 @@ def update_profile_admin_api(request):
 
     return Response({"message": "อัปเดตโปรไฟล์สำเร็จ"}, status=status.HTTP_200_OK)
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def sales_api(request):
@@ -1799,7 +1800,9 @@ def sales_api(request):
         course_details_dict = {cd.course_id: cd for cd in CourseDetails.objects.filter(course__in=booked_courses)}
 
         # ✅ คอร์สวิดีโอที่มีการซื้อ (รวมจำนวนการซื้อ)
-        purchased_courses = CourseOrder.objects.values("course_name").annotate(purchase_count=Count("id"))
+        purchased_courses = VideoCourse.objects.filter(
+            id__in=VideoCourseOrder.objects.values("course_id")  # ✅ ดึงเฉพาะคอร์สที่มีการซื้อ
+        ).annotate(purchase_count=Count("videocourseorder"))  # ✅ นับจำนวนการซื้อคอร์สวิดีโอ
 
         # ✅ จัดรูปแบบข้อมูลก่อนส่งกลับ
         data = {
@@ -1822,10 +1825,19 @@ def sales_api(request):
             ],
             "purchased_courses": [
                 {
-                    "course_name": purchase["course_name"],
-                    "purchase_count": purchase["purchase_count"]
+                    "course_id": course.id,
+                    "course_name": course.title if course.title else "N/A",
+                    "purchase_count": course.purchase_count,
+                    "course_image": request.build_absolute_uri(course.image.url)
+                    if course.image and hasattr(course.image, "url")
+                    else None,  
+                    "details": {
+                        "course_title": course.title,
+                        "course_description": course.description if course.description else "N/A",
+                        "course_price": float(course.price) if course.price else 0.0,
+                    }
                 }
-                for purchase in purchased_courses
+                for course in purchased_courses
             ]
         }
 
@@ -1833,7 +1845,6 @@ def sales_api(request):
 
     except Exception as e:
         return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=500)
-    
 
    
 @api_view(["GET"])
