@@ -789,7 +789,8 @@ def video_order_detail_api(request, course_id):
             "payment_date": order.payment_date.strftime("%Y-%m-%d %H:%M:%S") if order.payment_date else None,
             "price": float(order.course.price) if order.course.price else 0.0,
             "course_title": order.course.title,
-            "course_image": request.build_absolute_uri(order.course.image.url) if order.course.image else None
+            "course_image": request.build_absolute_uri(order.course.image.url) if order.course.image else None,
+            "payment_slip": request.build_absolute_uri(order.payment_slip.url) if order.payment_slip else None
         }
         for order in orders
     ]
@@ -799,6 +800,7 @@ def video_order_detail_api(request, course_id):
         "course_title": course.title,
         "course_image": request.build_absolute_uri(course.image.url) if course.image else None,
         "orders": orders_data,
+        
     }, status=200)
 
 
