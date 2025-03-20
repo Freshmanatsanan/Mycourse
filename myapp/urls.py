@@ -190,6 +190,18 @@ urlpatterns = [
     path("api/add-video-course-details/<int:course_id>/", views.add_video_course_details_api, name="add_video_course_details_api"),
     path("api/add-video-lesson/<int:course_id>/", views.add_video_lesson_api, name="add_video_lesson_api"),
 
+        # ✅ ดึงรายการคอร์สที่รอตรวจสอบ
+    path("api/review-video-courses/", views.review_video_courses_api, name="review_video_courses_api"),
+
+    # ✅ อนุมัติคอร์สเรียนแบบวิดีโอ
+    path("api/approve-video-course/<int:course_id>/", views.approve_video_course_api, name="approve_video_course_api"),
+
+    # ✅ ส่งคอร์สกลับไปแก้ไข
+    path("api/send-back-video-course/<int:course_id>/", views.send_back_video_course_api, name="send_back_video_course_api"),
+
+    # ✅ อัปโหลด QR Code สำหรับชำระเงิน
+    path("api/upload-video-course-qr/<int:course_id>/", views.upload_video_course_qr_api, name="upload_video_course_qr_api"),
+
 
 
 

@@ -585,7 +585,69 @@ def upload_video_course_qr(request, course_id):
 
     messages.error(request, "⚠️ กรุณาอัปโหลดไฟล์ QR Code")
     return redirect('review_video_courses')
+#-------------------------------------------------------------api-------------------------------------------------------------------
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def review_video_courses_api(request):
+    """ API ดึงคอร์สที่อยู่ในสถานะ 'รอการอนุมัติ' และ 'แก้ไขแล้วรอการตรวจสอบ' """
+    courses = VideoCourse.objects.filter(status__in=['pending', 'revised'])
+    course_data = [
+        {
+            "id": course.id,
+            "title": course.title,
+            "description": course.description,
+            "price": course.price,
+            "instructor": course.instructor,
+            "status": course.status,
+            "revision_message": course.revision_message,
+            "created_at": course.created_at,
+        }
+        for course in courses
+    ]
+    return Response({"courses": course_data})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def approve_video_course_api(request, course_id):
+    """ API อนุมัติคอร์สเรียนแบบวิดีโอ """
+    course = get_object_or_404(VideoCourse, id=course_id)
+    course.status = 'approved'
+    course.save()
+
+    # อัปเดต VideoLesson ที่เกี่ยวข้อง
+    VideoLesson.objects.filter(course=course, status='pending').update(status='approved')
+
+    return Response({"message": "✅ คอร์สเรียนได้รับการอนุมัติและ VideoLessons ที่เกี่ยวข้องได้รับการอนุมัติด้วย!"})
+
+@receiver(post_save, sender=VideoCourse)
+def approve_video_lessons(sender, instance, created, **kwargs):
+    """ เมื่อคอร์สเรียนได้รับการอนุมัติ, อนุมัติ VideoLesson ด้วย """
+    if instance.status == 'approved':
+        VideoLesson.objects.filter(course=instance, status='pending').update(status='approved')
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_back_video_course_api(request, course_id):
+    """ API ส่งคอร์สเรียนกลับไปแก้ไข """
+    revision_message = request.data.get('revision_message', '')
+    course = get_object_or_404(VideoCourse, id=course_id)
+    course.status = 'revision'
+    course.revision_message = revision_message
+    course.save()
+    return Response({"message": "⚠️ คอร์สถูกส่งกลับไปแก้ไขแล้ว!"})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_video_course_qr_api(request, course_id):
+    """ API อัปโหลด QR Code สำหรับคอร์สเรียนแบบวิดีโอ """
+    course = get_object_or_404(VideoCourse, id=course_id)
+    if 'payment_qr' in request.FILES:
+        course.payment_qr = request.FILES['payment_qr']
+        course.save()
+        return Response({"message": "✅ อัปโหลด QR Code สำเร็จแล้ว!"})
+    return Response({"error": "⚠️ กรุณาอัปโหลดไฟล์ QR Code"}, status=400)
+#-------------------------------------------------------------------------------------------------------------------------
 
 def video_course_details_user(request, course_id):
     """ แสดงรายละเอียดของคอร์สเรียนแบบวิดีโอ """
