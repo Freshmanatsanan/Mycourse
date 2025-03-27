@@ -133,3 +133,19 @@ header {
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
+/* ✅ Responsive */
+@media (max-width: 1024px) {
+    .register-container {
+        width: 60%;
+    }
+}
+
+@media (max-width: 768px) {
+    .register-container {
+        width: 90%;
+    }
+
+    input, .btn-register {
+        width: 100%;
+    }
+}

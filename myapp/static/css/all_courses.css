@@ -15,12 +15,11 @@ header {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 .courses-page .container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
     padding: 20px;
-    background-color: #FFF7F2;
+    flex-direction: column;
 }
 
 /* Page Title */
@@ -31,14 +30,6 @@ header {
     margin-bottom: 20px;
 }
 
-/* Grid Layout */
-.courses-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    width: 100%;
-    max-width: 900px; /* ขยายความกว้าง */
-}
 
 /* Course Item */
 .course-item {
@@ -49,6 +40,8 @@ header {
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s ease;
+    border: 0.5px solid #3498db;
+
 }
 
 .course-item:hover {
@@ -153,4 +146,29 @@ header {
 
 .tab-btn:hover {
     background-color: #18A9E4;
+}
+
+/* ✅ แสดง 2 ช่อง (คอลัมน์) ขนานกัน */
+.two-columns {
+    display: flex;
+    gap: 30px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-top: 30px;
+}
+
+/* ✅ คอลัมน์แต่ละฝั่ง */
+.column {
+    flex: 1 1 48%;
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+}
+
+/* ✅ คอร์สเรียงต่อกันในแต่ละฝั่ง */
+.column .courses-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }

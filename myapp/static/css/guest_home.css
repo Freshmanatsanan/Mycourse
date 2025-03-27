@@ -263,3 +263,20 @@ a {
     object-fit: contain; /* ทำให้รูปภาพเล็กลงและไม่ถูกครอบตัด */
     border-radius: 10px; /* มุมโค้งมน */
 }
+
+/* ✅ Responsive */
+@media (max-width: 1024px) {
+    .register-container {
+        width: 60%;
+    }
+}
+
+@media (max-width: 768px) {
+    .register-container {
+        width: 90%;
+    }
+
+    input, .btn-register {
+        width: 100%;
+    }
+}

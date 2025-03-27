@@ -303,7 +303,7 @@ def add_video_course(request):
 
 
 def video_courses(request):
-    courses = VideoCourse.objects.all()  # ดึงข้อมูลคอร์สเรียนแบบวิดีโอทั้งหมด
+    courses = VideoCourse.objects.filter(added_by=request.user)# ดึงข้อมูลคอร์สเรียนแบบวิดีโอทั้งหมด
     return render(request, "instructor/video_courses.html", {"courses": courses})
 
 @api_view(["GET"])
@@ -968,7 +968,6 @@ def register(request):
         email = request.POST['email']
         password = request.POST['password']
         password2 = request.POST['password2']
-        messages.get_messages(request).used = True
         # ตรวจสอบความยาวของรหัสผ่าน
         if len(password) < 8:
             messages.error(request, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร')
@@ -990,14 +989,14 @@ def register(request):
                 )
                 user.save()
 
-                # เพิ่มผู้ใช้เข้า Group 'Member' โดยค่าเริ่มต้น
+
                 try:
                     member_group = Group.objects.get(name='Member')  # ค้นหา Group ชื่อ 'Member'
                     user.groups.add(member_group)  # เพิ่มผู้ใช้เข้า Group
                 except Group.DoesNotExist:
                     messages.warning(request, 'Group "Member" ยังไม่ได้ถูกสร้างในระบบ')
 
-                messages.success(request, "✅ สมัครสมาชิกสำเร็จ!")
+                messages.success(request, "สมัครสมาชิกสำเร็จ!")
                 return redirect("register") 
             
 
@@ -3332,7 +3331,7 @@ def edit_course_details(request, course_id):
 
 @instructor_required
 def reservation_courses(request):
-    courses = Course.objects.all()
+    courses = Course.objects.filter(added_by=request.user)
     return render(request, 'instructor/reservation_courses.html', {'courses': courses})
 
 
@@ -3720,15 +3719,19 @@ def instructor_sales(request):
 
     # ✅ คอร์สเรียนแบบจองที่มีการจอง
     booked_courses = Course.objects.filter(
-        id__in=CourseBooking.objects.values("course_id")
+        id__in=CourseBooking.objects.values("course_id"),
+        added_by=request.user.id
     ).annotate(booking_count=Count("coursebooking"))
 
     # ✅ หา CourseDetails ที่เกี่ยวข้อง
-    course_details_dict = {cd.course_id: cd for cd in CourseDetails.objects.filter(course__in=booked_courses)}
+    course_details_dict = {
+        cd.course_id: cd 
+        for cd in CourseDetails.objects.filter(course__in=booked_courses)}
 
     # ✅ คอร์สเรียนแบบวิดีโอที่มีการซื้อ
     purchased_courses = VideoCourse.objects.filter(
-        id__in=VideoCourseOrder.objects.values("course_id")  # แก้ให้ใช้ VideoCourseOrder
+        id__in=VideoCourseOrder.objects.values("course_id"),  # แก้ให้ใช้ VideoCourseOrder
+        added_by=request.user.id
     ).annotate(purchase_count=Count("videocourseorder"))  # ใช้ related_name ที่ถูกต้อง
 
     return render(request, "instructor/sales.html",{
@@ -3778,15 +3781,16 @@ def instructor_video_order_detail(request,  order_id):
     })
 
 
-
 @login_required
 def user_booking_history(request):
-    # ✅ ดึงประวัติการจองของผู้ใช้ที่ล็อกอินอยู่
     bookings = CourseBooking.objects.filter(user=request.user).order_by("-booking_date")
+    video_orders = VideoCourseOrder.objects.filter(user=request.user).order_by("-payment_date")  # ✅ ใช้ payment_date แทน
 
     return render(request, "booking_history.html", {
-        "bookings": bookings
+        "bookings": bookings,
+        "video_orders": video_orders,
     })
+
 
 @login_required
 def my_courses(request):

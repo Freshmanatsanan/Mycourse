@@ -245,3 +245,33 @@ ul {
     .btn-close:hover {
         background-color: #218838;
     }
+    #alert-container {
+        margin-bottom: 15px;
+    }
+    
+    .alert {
+        padding: 10px;
+        border-radius: 5px;
+        font-family: 'Kanit', sans-serif;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    .alert-success {
+        background-color: #e6f4ea;
+        color: #2e7d32;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .alert-error {
+        background-color: #fdecea;
+        color: #b71c1c;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+    }
+    

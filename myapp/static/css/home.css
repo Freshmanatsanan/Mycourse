@@ -360,3 +360,20 @@ a {
     text-decoration: none;
     transition: background-color 0.3s;
 }
+
+/* ✅ Responsive */
+@media (max-width: 1024px) {
+    .register-container {
+        width: 60%;
+    }
+}
+
+@media (max-width: 768px) {
+    .register-container {
+        width: 90%;
+    }
+
+    input, .btn-register {
+        width: 100%;
+    }
+}

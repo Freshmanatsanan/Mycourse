@@ -151,3 +151,28 @@ form {
     text-decoration: underline;
     color: #4a47a3;
 }
+ul.messages {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+}
+
+ul.messages .message {
+    padding: 10px;
+    border-radius: 8px;
+    font-family: 'Kanit', sans-serif;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+ul.messages .error {
+    background-color: #fdecea;
+    color: #b71c1c;
+    border: 1px solid #f5c6cb;
+}
+
+ul.messages .success {
+    background-color: #e6f4ea;
+    color: #2e7d32;
+    border: 1px solid #c3e6cb;
+}

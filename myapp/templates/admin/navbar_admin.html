@@ -21,19 +21,19 @@
             <a href="{% url 'admin_dashboard' %}">Dashboard</a>
         </li>
         <li class="{% if request.resolver_match.url_name == 'review_booking_courses' %}active{% endif %}">
-            <a href="{% url 'review_booking_courses' %}">คอร์สเรียนแบบจอง</a>
+            <a href="{% url 'review_booking_courses' %}">ตรวจสอบคอร์สเรียนแบบจอง</a>
         </li>
         <li class="{% if request.resolver_match.url_name == 'review_video_courses' %}active{% endif %}">
-            <a href="{% url 'review_video_courses' %}">คอร์สเรียนแบบวิดีโอ</a>
+            <a href="{% url 'review_video_courses' %}">ตรวจสอบคอร์สเรียนแบบวิดีโอ</a>
         </li>
-        <li class="{% if request.resolver_match.url_name == 'sales'  or request.resolver_match.url_name == 'booking_detail'  %}active{% endif %}">
+        <li class="{% if request.resolver_match.url_name == 'sales'  or request.resolver_match.url_name == 'booking_detail' or request.resolver_match.url_name == 'video_order_detail'  %}active{% endif %}">
             <a href="{% url 'sales' %}">การขาย</a>
         </li>
         <li class="{% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'register_instructor'   %}active{% endif %}">
             <a href="{% url 'user_list' %}">รายชื่อ</a>
         </li>
         <li class="{% if request.resolver_match.url_name == 'banners_admin'  %}active{% endif %}">
-            <a href="{% url 'banners_admin' %}">โฆษณา</a>
+            <a href="{% url 'banners_admin' %}">ตรวจสอบโฆษณา</a>
         </li>
     </ul>
 

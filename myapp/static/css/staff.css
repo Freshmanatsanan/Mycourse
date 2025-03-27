@@ -26,10 +26,11 @@ header {
 
 /* Page Title */
 .page-title {
+    margin-top: 60px;
     text-align: center;
     font-size: 2rem;
     color: #FF5733;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
 }
 
 /* Staff Grid */
@@ -44,10 +45,12 @@ header {
 .staff-card {
     background: #fff;
     padding: 20px;
-    border-radius: 10px;
+    border-radius: 15px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     text-align: center;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 0.5px solid #613E74;
+
 }
 
 .staff-card:hover {
@@ -72,4 +75,21 @@ header {
     color: #555;
     margin-top: 10px;
     line-height: 1.4;
+}
+
+/* ✅ Responsive */
+@media (max-width: 1024px) {
+    .register-container {
+        width: 60%;
+    }
+}
+
+@media (max-width: 768px) {
+    .register-container {
+        width: 90%;
+    }
+
+    input, .btn-register {
+        width: 100%;
+    }
 }

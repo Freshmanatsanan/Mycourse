@@ -128,3 +128,54 @@
 .course-link:hover {
     text-decoration: underline;
 }
+
+
+.btn-back:hover {
+    background: #cc5500;
+}
+.btn-approve{
+    background-color: #28a745;
+    color: white;
+    border-radius: 10px;
+}
+
+.btn-approve:hover {
+    background-color: #218838;
+    transform: translateY(-2px); /* เพิ่มเอฟเฟกต์เลื่อนขึ้น */
+}
+
+.btn-reject {
+    background-color: #dc3545;
+    color: white;
+    border-radius: 10px;
+}
+
+.btn-reject:hover {
+    background-color: #c82333;
+    transform: translateY(-2px); /* เพิ่มเอฟเฟกต์เลื่อนขึ้น */
+}
+
+
+
+/* ✅ สีสถานะ "รอการยืนยัน" */
+.status-pending{
+    color: #FFD700; /* สีเหลือง */
+    border: 1px solid #DAA520;
+    border-radius: 6px;
+    
+}
+
+/* ✅ สีสถานะ "ยืนยันแล้ว" */
+.status-confirmed{
+    color: #4CAF50; /* สีเขียว */  
+    border: 1px solid #388E3C;
+    border-radius: 6px;
+}
+
+/* ✅ สีสถานะ "ยกเลิก" */
+.status-rejected{
+  color: #F44336; /* สีแดง */
+    
+    border: 1px solid #D32F2F;
+    border-radius: 6px;
+}

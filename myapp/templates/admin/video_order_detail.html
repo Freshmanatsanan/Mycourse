@@ -42,9 +42,9 @@
                         {% if order.payment_status == 'pending' %}
                             <span class="status-pending">รอการตรวจสอบ</span>
                         {% elif order.payment_status == 'confirmed' %}
-                            <span class="status-confirmed">✅ ชำระเงินแล้ว</span>
+                            <span class="status-confirmed">ชำระเงินแล้ว</span>
                         {% elif order.payment_status == 'rejected' %}
-                            <span class="status-rejected">❌ ถูกปฏิเสธ</span>
+                            <span class="status-rejected">ถูกปฏิเสธ</span>
                         {% endif %}
                     </td>
                     <td>{{ order.payment_date|date:"d/m/Y H:i" }}</td>
