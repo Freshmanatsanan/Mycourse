@@ -562,7 +562,7 @@ def api_edit_video_course_details(request, course_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_video_course_detail(request, course_id):
+def get_video_course_api(request, course_id):
     course = get_object_or_404(VideoCourse, id=course_id, added_by=request.user)
 
     return Response({

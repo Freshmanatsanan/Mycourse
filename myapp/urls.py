@@ -222,7 +222,7 @@ urlpatterns = [
     # ✅ API แก้ไขบทเรียนวิดีโอ
     path('api/edit-video-lesson/<int:course_id>/', views.api_edit_video_lesson, name='api_edit_video_lesson'),
 
-    path('api/video-course-detail/<int:course_id>/', views.get_video_course_detail, name='get_video_course_detail'),
+    path('api/get-video-course_api/<int:course_id>/', views.get_video_course_api, name='get_video_course_api'),
 
 
 
