@@ -560,6 +560,23 @@ def api_edit_video_course_details(request, course_id):
 
     return Response({"message": "อัปเดตรายละเอียดคอร์สสำเร็จ"})
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_video_course_detail(request, course_id):
+    course = get_object_or_404(VideoCourse, id=course_id, added_by=request.user)
+
+    return Response({
+        "id": course.id,
+        "title": course.title,
+        "description": course.description,
+        "price": course.price,
+        "image": course.image.url if course.image else None,
+        "instructor": course.instructor,
+        "status": course.status,
+        "created_at": course.created_at,
+    })
+
+
 #------------------------------------------------------------------------------------
 
 @login_required
