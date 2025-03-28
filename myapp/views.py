@@ -651,10 +651,11 @@ def edit_video_lesson(request, course_id):
     return render(request, "instructor/edit_video_lesson.html", {"lesson": lesson})
 
 #-------------------------------------api---------------------------------------------
+
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def api_edit_video_lesson(request, course_id):
-    lesson = get_object_or_404(VideoLesson, course_id=course_id)
+    lesson = get_object_or_404(VideoLesson, course_id=course_id,instructor=request.user)
 
     lesson.title = request.data.get("title", lesson.title)
     lesson.description = request.data.get("description", lesson.description)
