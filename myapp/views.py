@@ -69,7 +69,6 @@ from datetime import timedelta  # ✅ Import timedelta แยกออกมา
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 #---------------------------------------------------------------------------------
-from rest_framework.parsers import MultiPartParser, FormParser
 import requests
 from django.shortcuts import render
 from django.http import HttpResponseForbidden
@@ -1805,7 +1804,7 @@ def add_course_details_api(request, course_id):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
 @api_view(['PUT'])
-@parser_classes([MultiPartParser, FormParser]) 
+
 @permission_classes([IsAuthenticated])
 def edit_course_api(request, course_id):
     """
