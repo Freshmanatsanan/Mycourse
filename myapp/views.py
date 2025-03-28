@@ -655,7 +655,7 @@ def edit_video_lesson(request, course_id):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def api_edit_video_lesson(request, course_id):
-    lesson = get_object_or_404(VideoLesson, course_id=course_id,instructor=request.user)
+    lesson = get_object_or_404(VideoLesson, course_id=course_id, instructor_id=request.user)
 
     lesson.title = request.data.get("title", lesson.title)
     lesson.description = request.data.get("description", lesson.description)
@@ -688,7 +688,7 @@ def api_edit_video_lesson(request, course_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_video_lesson_api(request, course_id):
-    lesson = get_object_or_404(VideoLesson, course_id=course_id, instructor=request.user)
+    lesson = get_object_or_404(VideoLesson, course_id=course_id, instructor_id=request.user)
 
     return Response({
         "title": lesson.title,

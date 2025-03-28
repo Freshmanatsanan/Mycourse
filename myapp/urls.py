@@ -229,7 +229,7 @@ urlpatterns = [
     path('api/get-video-course-details/<int:course_id>/', views.get_video_course_details_api, name='get_video_course_details_api'),
 
     # urls.py
-    path('api/get-video-lesson/<int:course_id>/', views.get_video_lesson_api, name='get_video_lesson_api'),
+    path('api/get-video-lesson-api/<int:course_id>/', views.get_video_lesson_api, name='get_video_lesson_api'),
 
 
 
