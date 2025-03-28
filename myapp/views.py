@@ -493,7 +493,7 @@ def get_video_course_api(request, course_id):
         "title": course.title,
         "description": course.description,
         "price": course.price,
-        "image": course.image.url if course.image else None,
+        "image_url": request.build_absolute_uri(course.image.url) if course.image else None,  # ✅
         "instructor": course.instructor,
         "status": course.status,
         "created_at": course.created_at,
@@ -589,9 +589,9 @@ def get_video_course_details_api(request, course_id):
         "name": details.name,
         "description": details.description,
         "additional_description": details.additional_description,
-        "image": details.image.url if details.image else None,
-        "additional_image": details.additional_image.url if details.additional_image else None,
-        "preview_video": details.preview_video.url if details.preview_video else None,
+"image_url": request.build_absolute_uri(details.image.url) if details.image else None,
+"additional_image_url": request.build_absolute_uri(details.additional_image.url) if details.additional_image else None,
+"preview_video_url": request.build_absolute_uri(details.preview_video.url) if details.preview_video else None,
     })
 
 #------------------------------------------------------------------------------------
