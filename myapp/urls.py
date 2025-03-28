@@ -211,6 +211,9 @@ urlpatterns = [
     # ปฏิเสธการชำระเงิน
     path('api/reject-video-order/<int:order_id>/', views.reject_video_order_api, name='reject_video_order'),
 
+    path('api/delete-video-course/<int:course_id>/', views.delete_video_course_api, name='delete_video_course_api'),
+
+
 
 
 

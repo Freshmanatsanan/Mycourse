@@ -400,6 +400,25 @@ def delete_selected_video_courses(request):
 
     messages.error(request, "ไม่สามารถลบคอร์สได้")
     return redirect("instructor_live_courses")  # เปลี่ยนเส้นทางกลับไปที่หน้าคอร์ส# เปลี่ยนเส้นทางกลับไปที่หน้าคอร์ส
+
+#-----------------------------------------------api-------------------------------------
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])  # หรือเอาออกหากไม่ต้องการจำกัด
+def delete_video_course_api(request, course_id):
+    try:
+        course = get_object_or_404(VideoCourse, id=course_id)
+
+        # ลบข้อมูลที่เกี่ยวข้อง
+        VideoCourseDetails.objects.filter(course=course).delete()
+        VideoLesson.objects.filter(course=course).delete()
+        course.delete()
+
+        return Response({"message": "ลบคอร์สเรียนสำเร็จ!"}, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        return Response({"error": "เกิดข้อผิดพลาดในการลบคอร์ส: " + str(e)},
+                        status=status.HTTP_400_BAD_REQUEST)
+#-----------------------------------------------------------------------------------------------
 @login_required
 def edit_video_course(request, course_id):
     course = get_object_or_404(VideoCourse, id=course_id)
