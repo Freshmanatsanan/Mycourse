@@ -213,6 +213,15 @@ urlpatterns = [
 
     path('api/delete-video-course/<int:course_id>/', views.delete_video_course_api, name='delete_video_course_api'),
 
+        # ✅ API แก้ไขข้อมูลหลักของคอร์สวิดีโอ
+    path('api/edit-video-course/<int:course_id>/', views.api_edit_video_course, name='api_edit_video_course'),
+
+    # ✅ API แก้ไขรายละเอียดของคอร์สวิดีโอ
+    path('api/edit-video-course-details/<int:course_id>/', views.api_edit_video_course_details, name='api_edit_video_course_details'),
+
+    # ✅ API แก้ไขบทเรียนวิดีโอ
+    path('api/edit-video-lesson/<int:course_id>/', views.api_edit_video_lesson, name='api_edit_video_lesson'),
+
 
 
 

@@ -453,6 +453,37 @@ def edit_video_course(request, course_id):
 
     return render(request, "instructor/edit_video_course.html", {"course": course})
 
+#-------------------------------------api---------------------------------------------
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def api_edit_video_course(request, course_id):
+    course = get_object_or_404(VideoCourse, id=course_id, added_by=request.user)
+
+    title = request.data.get("title")
+    description = request.data.get("description")
+    price = request.data.get("price")
+    image = request.FILES.get("image")
+
+    if not title or not description or not price:
+        return Response({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
+
+    course.title = title
+    course.description = description
+    course.price = price
+
+    if image:
+        if course.image and os.path.exists(course.image.path):
+            os.remove(course.image.path)
+        course.image = image
+
+    course.status = 'revised'
+    course.save()
+
+    return Response({"message": "อัปเดตข้อมูลหลักของคอร์สสำเร็จ"})
+
+#----------------------------------------------------------------------------------------------------
+
 @login_required
 def edit_video_course_details(request, course_id):
     course_details = get_object_or_404(VideoCourseDetails, course_id=course_id)
@@ -497,6 +528,39 @@ def edit_video_course_details(request, course_id):
         return redirect("edit_video_lesson", course_id=course_details.course.id)  # ✅ ไปยังหน้าถัดไป
 
     return render(request, "instructor/edit_video_course_details.html", {"course_details": course_details})
+
+#-------------------------------------api---------------------------------------------
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def api_edit_video_course_details(request, course_id):
+    details = get_object_or_404(VideoCourseDetails, course_id=course_id, )
+
+    details.name = request.data.get("name", details.name)
+    details.description = request.data.get("description", details.description)
+    details.additional_description = request.data.get("additional_description", details.additional_description)
+
+    if 'image' in request.FILES:
+        if details.image and os.path.exists(details.image.path):
+            os.remove(details.image.path)
+        details.image = request.FILES['image']
+
+    if 'additional_image' in request.FILES:
+        if details.additional_image and os.path.exists(details.additional_image.path):
+            os.remove(details.additional_image.path)
+        details.additional_image = request.FILES['additional_image']
+
+    if 'preview_video' in request.FILES:
+        if details.preview_video and os.path.exists(details.preview_video.path):
+            os.remove(details.preview_video.path)
+        details.preview_video = request.FILES['preview_video']
+
+    details.course.status = 'revised'
+    details.save()
+
+    return Response({"message": "อัปเดตรายละเอียดคอร์สสำเร็จ"})
+
+#------------------------------------------------------------------------------------
 
 @login_required
 def edit_video_lesson(request, course_id):
@@ -551,6 +615,42 @@ def edit_video_lesson(request, course_id):
         return redirect("instructor_live_courses")  # ✅ กลับไปที่รายการคอร์สวิดีโอ
 
     return render(request, "instructor/edit_video_lesson.html", {"lesson": lesson})
+
+#-------------------------------------api---------------------------------------------
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def api_edit_video_lesson(request, course_id):
+    lesson = get_object_or_404(VideoLesson, course_id=course_id)
+
+    lesson.title = request.data.get("title", lesson.title)
+    lesson.description = request.data.get("description", lesson.description)
+    lesson.duration = request.data.get("duration", lesson.duration)
+
+    if 'document' in request.FILES:
+        if lesson.document and os.path.exists(lesson.document.path):
+            os.remove(lesson.document.path)
+        lesson.document = request.FILES['document']
+
+    if 'video_file' in request.FILES:
+        video = request.FILES['video_file']
+        temp_path = os.path.join("media", video.name)
+        with open(temp_path, "wb+") as destination:
+            for chunk in video.chunks():
+                destination.write(chunk)
+
+        # 👇 อัปโหลด Google Drive
+        google_drive_id = upload_video_to_drive(temp_path, video.name)
+        lesson.google_drive_id = google_drive_id
+
+        os.remove(temp_path)
+
+    lesson.course.status = 'revised'
+    lesson.save()
+
+    return Response({"message": "อัปเดตบทเรียนวิดีโอสำเร็จ"})
+
+#------------------------------------------------------------------------------------
+
 
 def review_video_courses(request):
     """ ดึงคอร์สที่อยู่ในสถานะ 'รอการอนุมัติ' และ 'แก้ไขแล้วรอการตรวจสอบ' """
