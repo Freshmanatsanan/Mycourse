@@ -482,6 +482,23 @@ def api_edit_video_course(request, course_id):
 
     return Response({"message": "อัปเดตข้อมูลหลักของคอร์สสำเร็จ"})
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_video_course_api(request, course_id):
+    course = get_object_or_404(VideoCourse, id=course_id, added_by=request.user)
+
+    return Response({
+        "id": course.id,
+        "title": course.title,
+        "description": course.description,
+        "price": course.price,
+        "image": course.image.url if course.image else None,
+        "instructor": course.instructor,
+        "status": course.status,
+        "created_at": course.created_at,
+    })
+
 #----------------------------------------------------------------------------------------------------
 
 @login_required
@@ -560,22 +577,22 @@ def api_edit_video_course_details(request, course_id):
 
     return Response({"message": "อัปเดตรายละเอียดคอร์สสำเร็จ"})
 
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_video_course_api(request, course_id):
-    course = get_object_or_404(VideoCourse, id=course_id, added_by=request.user)
+def get_video_course_details_api(request, course_id):
+    details = get_object_or_404(VideoCourseDetails, course_id=course_id, course__added_by=request.user)
 
     return Response({
-        "id": course.id,
-        "title": course.title,
-        "description": course.description,
-        "price": course.price,
-        "image": course.image.url if course.image else None,
-        "instructor": course.instructor,
-        "status": course.status,
-        "created_at": course.created_at,
+        "id": details.id,
+        "name": details.name,
+        "description": details.description,
+        "additional_description": details.additional_description,
+        "image": details.image.url if details.image else None,
+        "additional_image": details.additional_image.url if details.additional_image else None,
+        "preview_video": details.preview_video.url if details.preview_video else None,
     })
-
 
 #------------------------------------------------------------------------------------
 
@@ -665,6 +682,22 @@ def api_edit_video_lesson(request, course_id):
     lesson.save()
 
     return Response({"message": "อัปเดตบทเรียนวิดีโอสำเร็จ"})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_video_lesson_api(request, course_id):
+    lesson = get_object_or_404(VideoLesson, course_id=course_id, instructor=request.user)
+
+    return Response({
+        "title": lesson.title,
+        "description": lesson.description,
+        "duration": lesson.duration,
+        "document_url": lesson.document.url if lesson.document else None,
+        "google_drive_id": lesson.google_drive_id,
+        "status": lesson.status,
+    })
+
 
 #------------------------------------------------------------------------------------
 
