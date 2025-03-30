@@ -74,7 +74,8 @@ from django.shortcuts import render
 from django.http import HttpResponseForbidden
 from .utils import grant_access_to_user  # ถ้า grant_access_to_user อยู่ในไฟล์ utils.py
 from django.core.files.storage import default_storage
-
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 
 # ใส่ API Key ของคุณจาก Google Cloud
 YOUTUBE_API_KEY = "AIzaSyBv1lfL1TwK2JyJqD_w1q1OwPtXWbZzal8"  # 🔴 เปลี่ยนเป็น API Key ของคุณ
@@ -1804,7 +1805,7 @@ def add_course_details_api(request, course_id):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
 @api_view(['PUT'])
-
+@parser_classes([MultiPartParser, FormParser])  # ✅ เพิ่มบรรทัดนี้
 @permission_classes([IsAuthenticated])
 def edit_course_api(request, course_id):
     """
