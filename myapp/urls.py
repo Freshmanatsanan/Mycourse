@@ -221,6 +221,7 @@ urlpatterns = [
 
     # ✅ API แก้ไขบทเรียนวิดีโอ
     path('api/edit-video-lesson-api/<int:course_id>/', views.api_edit_video_lesson, name='api_edit_video_lesson'),
+    path("api/get-course/<int:course_id>/", views.get_course_api, name="get_course_api"),
 
 
 

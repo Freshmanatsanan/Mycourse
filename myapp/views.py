@@ -1809,38 +1809,52 @@ def add_course_details_api(request, course_id):
 @permission_classes([IsAuthenticated])
 def edit_course_api(request, course_id):
     """
-    ✅ API สำหรับแก้ไขคอร์สเรียน
+    ✅ API สำหรับแก้ไขคอร์สเรียนแบบจอง (ข้อมูลหลัก)
     """
     course = get_object_or_404(Course, id=course_id, added_by=request.user)
 
-    try:
-        # อัปเดตข้อมูลคอร์ส
-        course.title = request.data.get('title', course.title)
-        course.description = request.data.get('description', course.description)
-        course.instructor = request.data.get('instructor', course.instructor)
-        course.price = request.data.get('price', course.price)
+    title = request.data.get("title")
+    description = request.data.get("description")
+    instructor = request.data.get("instructor")
+    price = request.data.get("price")
+    image = request.FILES.get("image")
 
-        # ตรวจสอบว่าราคาถูกต้อง
-        try:
-            price = float(course.price)
-            if price < 0:
-                return Response({"error": "ราคาไม่สามารถติดลบได้"}, status=status.HTTP_400_BAD_REQUEST)
-        except ValueError:
-            return Response({"error": "กรุณาระบุราคาที่ถูกต้อง"}, status=status.HTTP_400_BAD_REQUEST)
+    if not title or not description or not price or not instructor:
+        return Response({"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}, status=400)
 
-        # อัปเดตรูปภาพถ้ามีการอัปโหลดใหม่
-        if 'image' in request.FILES:
-            course.image = request.FILES['image']
+    course.title = title
+    course.description = description
+    course.instructor = instructor
+    course.price = price
 
-        course.save()
+    if image:
+        # ลบรูปเดิม (ถ้ามี)
+        if course.image and os.path.exists(course.image.path):
+            os.remove(course.image.path)
+        course.image = image
 
-        return Response({
-            "message": "✅ แก้ไขคอร์สเรียนสำเร็จ!",
-            "course_id": course.id
-        }, status=status.HTTP_200_OK)
+    course.save()
 
-    except Exception as e:
-        return Response({"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return Response({"message": "✅ แก้ไขคอร์สเรียนสำเร็จ!"}, status=200)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_course_api(request, course_id):
+    """
+    ✅ API สำหรับดึงข้อมูลหลักของคอร์สเรียนแบบจอง
+    """
+    course = get_object_or_404(Course, id=course_id, added_by=request.user)
+
+    return Response({
+        "id": course.id,
+        "title": course.title,
+        "description": course.description,
+        "instructor": course.instructor,
+        "price": course.price,
+        "image_url": request.build_absolute_uri(course.image.url) if course.image else None,
+        "created_at": course.created_at,
+    })
+
 
 @api_view(['GET', 'PUT', 'POST'])  # ✅ เพิ่ม GET Method
 @permission_classes([IsAuthenticated])
