@@ -691,7 +691,7 @@ def get_video_lesson_api(request, course_id):
     # ✅ ตรวจสอบว่าผู้ใช้ซื้อคอร์สวิดีโอและได้รับการอนุมัติ
     order = VideoCourseOrder.objects.filter(
         user=request.user,
-        course_id=course_id,
+        course__id=course_id,
         payment_status='confirmed'
     ).first()
 
