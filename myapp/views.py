@@ -688,18 +688,43 @@ def api_edit_video_lesson(request, course_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_video_lesson_api(request, course_id):
-    lesson = get_object_or_404(VideoLesson, course_id=course_id, instructor=request.user)
+    # ตรวจสอบว่าผู้ใช้ซื้อคอร์สนี้และชำระเงินแล้ว
+    course = get_object_or_404(VideoCourse, id=course_id)
+    order = VideoCourseOrder.objects.filter(user=request.user, course=course, payment_status='confirmed').first()
+
+    if not order:
+        return HttpResponseForbidden("คุณต้องซื้อคอร์สก่อนถึงจะสามารถเข้าถึงได้")
+
+    # ดึงบทเรียนทั้งหมด
+    lessons = VideoLesson.objects.filter(course=course)
+
+    # แชร์สิทธิ์ Google Drive ถ้ามี
+    for lesson in lessons:
+        if lesson.google_drive_id:
+            grant_access_to_user(lesson.google_drive_id, request.user.email)
+
+    # แปลงข้อมูลเพื่อส่งกลับ
+    lesson_data = []
+    for lesson in lessons:
+        lesson_data.append({
+            'id': lesson.id,
+            'title': lesson.title,
+            'description': lesson.description,
+            'duration': lesson.duration,
+            'video_url': lesson.video_url,  # ถ้าคุณใช้ลิงก์ YouTube หรือ Drive
+            'document': lesson.document.url if lesson.document else None,
+            'status': lesson.status,
+        })
 
     return Response({
-        "title": lesson.title,
-        "description": lesson.description,
-        "duration": lesson.duration,
-        "document_url": lesson.document.url if lesson.document else None,
-        "google_drive_id": lesson.google_drive_id,
-        "status": lesson.status,
+        "course": {
+            "id": course.id,
+            "title": course.title,
+            "description": course.description,
+            "image": course.image.url if course.image else None,
+        },
+        "lessons": lesson_data
     })
-
-
 #------------------------------------------------------------------------------------
 
 
@@ -1855,7 +1880,7 @@ def get_course_api(request, course_id):
         "created_at": course.created_at,
     })
 
-@api_view(['PUT'])  # ✅ ต้องมี PUT
+@api_view(['PUT'])  
 @parser_classes([MultiPartParser, FormParser])
 @permission_classes([IsAuthenticated])
 def edit_course_details_api(request, course_id):
