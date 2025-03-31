@@ -692,6 +692,7 @@ def get_video_lesson_api(request, course_id):
     print(">>> Course ID:", course_id)
 
     # ✅ ตรวจสอบว่าผู้ใช้ซื้อคอร์สวิดีโอและได้รับการอนุมัติ
+    # ✅ ตรวจสอบว่าผู้ใช้ซื้อคอร์สวิดีโอและได้รับการอนุมัติ
     order = VideoCourseOrder.objects.filter(
         user=request.user,
         course__id=course_id,
@@ -703,17 +704,25 @@ def get_video_lesson_api(request, course_id):
 
     # ✅ ดึงคอร์สและบทเรียนทั้งหมด
     course = get_object_or_404(VideoCourse, id=course_id)
-    lessons = VideoLesson.objects.filter(course=course)
+    lessons = VideoLesson.objects.filter(course=course, status="approved")
 
     lesson_data = []
     for lesson in lessons:
+        video_url = None
+        if lesson.google_drive_id:
+            # ✅ ให้สิทธิ์ผู้ใช้เข้าถึงวิดีโอบทเรียน
+            grant_access_to_user(lesson.google_drive_id, request.user.email)
+
+            # ✅ ใช้ URL สำหรับ WebView ที่แสดงผลได้ใน React Native
+            video_url = f"https://drive.google.com/uc?id={lesson.google_drive_id}&export=download"
+
         lesson_data.append({
             "id": lesson.id,
             "title": lesson.title,
             "description": lesson.description,
             "duration": lesson.duration,
             "document": request.build_absolute_uri(lesson.document.url) if lesson.document else None,
-            "video_url": f"https://drive.google.com/file/d/{lesson.google_drive_id}/preview" if lesson.google_drive_id else None,
+            "video_url": video_url,
             "status": lesson.status,
         })
 
@@ -725,7 +734,6 @@ def get_video_lesson_api(request, course_id):
         },
         "lessons": lesson_data
     })
-
 
 #------------------------------------------------------------------------------------
 
