@@ -688,6 +688,9 @@ def api_edit_video_lesson(request, course_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_video_lesson_api(request, course_id):
+    print(">>> User:", request.user)
+    print(">>> Course ID:", course_id)
+
     # ✅ ตรวจสอบว่าผู้ใช้ซื้อคอร์สวิดีโอและได้รับการอนุมัติ
     order = VideoCourseOrder.objects.filter(
         user=request.user,
