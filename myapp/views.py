@@ -1863,7 +1863,7 @@ def edit_course_details_api(request, course_id):
     """
     ✅ API สำหรับแก้ไขรายละเอียดคอร์สเรียนแบบจอง
     """
-    course_details = get_object_or_404(CourseDetails, course__id=course_id, course__added_by=request.user)
+    course_details = get_object_or_404(CourseDetails, course__id=course_id)
 
     course_details.name = request.data.get('name', course_details.name)
     course_details.description = request.data.get('description', course_details.description)
