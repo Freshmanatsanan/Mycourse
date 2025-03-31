@@ -208,7 +208,7 @@ urlpatterns = [
     path('api/video-order-detail/<int:course_id>/', views.video_order_detail_api, name='video_order_detail_api'),
     
     # อนุมัติการชำระเงิน
-    path('api/confirm-video-order/<int:order_id>/', views.confirm_video_order_api, name='confirm_video_order'),
+    path('api/confirm-video-order-api/<int:order_id>/', views.confirm_video_order_api, name='confirm_video_order'),
     
     # ปฏิเสธการชำระเงิน
     path('api/reject-video-order/<int:order_id>/', views.reject_video_order_api, name='reject_video_order'),
