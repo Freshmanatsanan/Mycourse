@@ -146,7 +146,7 @@ urlpatterns = [
 
     # ✅ API สำหรับแก้ไขคอร์ส
     path('api/edit-course/<int:course_id>/', views.edit_course_api, name='edit_course_api'),
-    path('api/edit-course-details/<int:course_id>/', views.edit_course_details_api, name='edit_course_details_api'),
+    path('api/edit-course-details-api/<int:course_id>/', views.edit_course_details_api, name='edit_course_details_api'),
     path("api/get-course/<int:course_id>/", views.get_course_api, name="get_course_api"),
     path('api/get-course-details/<int:course_id>/', views.get_course_details_api, name='get_course_details_api'),
 
