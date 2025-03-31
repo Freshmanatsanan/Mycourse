@@ -1856,7 +1856,8 @@ def get_course_api(request, course_id):
     })
 
 
-@api_view(['GET', 'PUT', 'POST'])  # ✅ เพิ่ม GET Method
+@api_view(['PUT'])  # ✅ เพิ่ม GET Method
+@parser_classes([MultiPartParser, FormParser])  # ✅ เพิ่มตรงนี้
 @permission_classes([IsAuthenticated])
 def edit_course_details_api(request, course_id):
     """
