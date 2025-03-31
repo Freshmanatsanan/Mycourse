@@ -688,43 +688,42 @@ def api_edit_video_lesson(request, course_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_video_lesson_api(request, course_id):
-    # ตรวจสอบว่าผู้ใช้ซื้อคอร์สนี้และชำระเงินแล้ว
-    course = get_object_or_404(VideoCourse, id=course_id)
-    order = VideoCourseOrder.objects.filter(user=request.user, course=course, payment_status='confirmed').first()
+    # ✅ ตรวจสอบว่าผู้ใช้ซื้อคอร์สวิดีโอและได้รับการอนุมัติ
+    order = VideoCourseOrder.objects.filter(
+        user=request.user,
+        course_id=course_id,
+        payment_status='confirmed'
+    ).first()
 
     if not order:
-        return HttpResponseForbidden("คุณต้องซื้อคอร์สก่อนถึงจะสามารถเข้าถึงได้")
+        return Response({'detail': 'คุณต้องซื้อคอร์สก่อน'}, status=403)
 
-    # ดึงบทเรียนทั้งหมด
+    # ✅ ดึงคอร์สและบทเรียนทั้งหมด
+    course = get_object_or_404(VideoCourse, id=course_id)
     lessons = VideoLesson.objects.filter(course=course)
 
-    # แชร์สิทธิ์ Google Drive ถ้ามี
-    for lesson in lessons:
-        if lesson.google_drive_id:
-            grant_access_to_user(lesson.google_drive_id, request.user.email)
-
-    # แปลงข้อมูลเพื่อส่งกลับ
     lesson_data = []
     for lesson in lessons:
         lesson_data.append({
-            'id': lesson.id,
-            'title': lesson.title,
-            'description': lesson.description,
-            'duration': lesson.duration,
-            'video_url': lesson.video_url,  # ถ้าคุณใช้ลิงก์ YouTube หรือ Drive
-            'document': lesson.document.url if lesson.document else None,
-            'status': lesson.status,
+            "id": lesson.id,
+            "title": lesson.title,
+            "description": lesson.description,
+            "duration": lesson.duration,
+            "document": request.build_absolute_uri(lesson.document.url) if lesson.document else None,
+            "video_url": f"https://drive.google.com/file/d/{lesson.google_drive_id}/preview" if lesson.google_drive_id else None,
+            "status": lesson.status,
         })
 
     return Response({
         "course": {
-            "id": course.id,
             "title": course.title,
             "description": course.description,
-            "image": course.image.url if course.image else None,
+            "image": request.build_absolute_uri(course.image.url) if course.image else None,
         },
         "lessons": lesson_data
     })
+
+
 #------------------------------------------------------------------------------------
 
 
