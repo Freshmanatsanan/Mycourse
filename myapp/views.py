@@ -1855,9 +1855,8 @@ def get_course_api(request, course_id):
         "created_at": course.created_at,
     })
 
-
-@api_view(['PUT'])  # ✅ เพิ่ม GET Method
-@parser_classes([MultiPartParser, FormParser])  # ✅ เพิ่มตรงนี้
+@api_view(['GET','PUT'])  # ✅ ต้องมี PUT
+@parser_classes([MultiPartParser, FormParser])
 @permission_classes([IsAuthenticated])
 def edit_course_details_api(request, course_id):
     """
