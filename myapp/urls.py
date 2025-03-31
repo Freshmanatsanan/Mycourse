@@ -147,7 +147,9 @@ urlpatterns = [
     # ✅ API สำหรับแก้ไขคอร์ส
     path('api/edit-course/<int:course_id>/', views.edit_course_api, name='edit_course_api'),
     path('api/edit-course-details/<int:course_id>/', views.edit_course_details_api, name='edit_course_details_api'),
-
+    path("api/get-course/<int:course_id>/", views.get_course_api, name="get_course_api"),
+    path('api/get-course-details/<int:course_id>/', views.get_course_details_api, name='get_course_details_api'),
+    
     # ✅ API สำหรับส่งคอร์สให้แอดมินตรวจสอบ
     path('api/submit-course-review/<int:course_id>/', views.submit_course_review_api, name='submit_course_review_api'),
     path('api/delete-course/<int:course_id>/', views.delete_course_api, name='delete_course_api'),
@@ -221,7 +223,8 @@ urlpatterns = [
 
     # ✅ API แก้ไขบทเรียนวิดีโอ
     path('api/edit-video-lesson-api/<int:course_id>/', views.api_edit_video_lesson, name='api_edit_video_lesson'),
-    path("api/get-course/<int:course_id>/", views.get_course_api, name="get_course_api"),
+
+
 
 
 

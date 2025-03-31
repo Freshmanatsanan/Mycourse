@@ -1860,72 +1860,48 @@ def get_course_api(request, course_id):
 @permission_classes([IsAuthenticated])
 def edit_course_details_api(request, course_id):
     """
-    ✅ API สำหรับแก้ไขรายละเอียดคอร์สเรียน
+    ✅ API สำหรับแก้ไขรายละเอียดคอร์สเรียนแบบจอง
     """
     course_details = get_object_or_404(CourseDetails, course__id=course_id, course__added_by=request.user)
 
-    if request.method == 'GET':  # ✅ เพิ่มการดึงข้อมูล
-        return Response({
-            "name": course_details.name,
-            "description": course_details.description,
-            "additional_description": course_details.additional_description,
-            "image": course_details.image.url if course_details.image else None,
-            "additional_image": course_details.additional_image.url if course_details.additional_image else None,
-            "extra_image_1": course_details.extra_image_1.url if course_details.extra_image_1 else None,
-            "extra_image_2": course_details.extra_image_2.url if course_details.extra_image_2 else None,
-        }, status=status.HTTP_200_OK)
-
-    if request.method in ['PUT', 'POST']:  # ✅ PUT/POST สำหรับการแก้ไข
-        course_details.name = request.data.get('name', course_details.name)
-        course_details.description = request.data.get('description', course_details.description)
-        course_details.additional_description = request.data.get('additional_description', course_details.additional_description)
-
-        if 'image' in request.FILES:
-            course_details.image = request.FILES['image']
-        if 'additional_image' in request.FILES:
-            course_details.additional_image = request.FILES['additional_image']
-        if 'extra_image_1' in request.FILES:
-            course_details.extra_image_1 = request.FILES['extra_image_1']
-        if 'extra_image_2' in request.FILES:
-            course_details.extra_image_2 = request.FILES['extra_image_2']
-
-        course_details.save()
-        return Response({
-            "message": "✅ แก้ไขรายละเอียดคอร์สสำเร็จ และส่งไปตรวจสอบ!",
-            "course_id": course_details.course.id
-        }, status=status.HTTP_200_OK)
-
-
-#@api_view(['PUT', 'POST']) 
-#@permission_classes([IsAuthenticated])
-#def edit_course_details_api(request, course_id):
-    """
-    ✅ API สำหรับแก้ไขรายละเอียดคอร์สเรียน
-    """
-    course_details = get_object_or_404(CourseDetails, course__id=course_id, course__added_by=request.user)
-    course = course_details.course
-
-    # อัปเดตค่าที่ได้รับจาก request
     course_details.name = request.data.get('name', course_details.name)
     course_details.description = request.data.get('description', course_details.description)
     course_details.additional_description = request.data.get('additional_description', course_details.additional_description)
 
-    # อัปเดตรูปภาพถ้ามีการอัปโหลดใหม่
     if 'image' in request.FILES:
         course_details.image = request.FILES['image']
     if 'additional_image' in request.FILES:
         course_details.additional_image = request.FILES['additional_image']
+    if 'extra_image_1' in request.FILES:
+        course_details.extra_image_1 = request.FILES['extra_image_1']
+    if 'extra_image_2' in request.FILES:
+        course_details.extra_image_2 = request.FILES['extra_image_2']
 
-    # อัปเดตสถานะคอร์สเป็น "แก้ไขแล้วรอการตรวจสอบ"
-    course.status = 'revised'
-    course.save()
     course_details.save()
 
     return Response({
-        "message": "✅ แก้ไขรายละเอียดคอร์สสำเร็จ และส่งไปตรวจสอบ!",
-        "course_id": course.id
+        "message": "✅ แก้ไขรายละเอียดคอร์สสำเร็จ",
+        "course_id": course_details.course.id
     }, status=status.HTTP_200_OK)
-    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_course_details_api(request, course_id):
+    """
+    ✅ API สำหรับดึงรายละเอียดคอร์สเรียนแบบจอง
+    """
+    course_details = get_object_or_404(CourseDetails, course__id=course_id, course__added_by=request.user)
+
+    return Response({
+        "name": course_details.name,
+        "description": course_details.description,
+        "additional_description": course_details.additional_description,
+        "image": course_details.image.url if course_details.image else None,
+        "additional_image": course_details.additional_image.url if course_details.additional_image else None,
+        "extra_image_1": course_details.extra_image_1.url if course_details.extra_image_1 else None,
+        "extra_image_2": course_details.extra_image_2.url if course_details.extra_image_2 else None,
+    }, status=status.HTTP_200_OK)
+ 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def submit_course_review_api(request, course_id):
