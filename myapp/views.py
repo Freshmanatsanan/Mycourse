@@ -714,7 +714,7 @@ def get_video_lesson_api(request, course_id):
             grant_access_to_user(lesson.google_drive_id, request.user.email)
 
             # ✅ ใช้ URL สำหรับ WebView ที่แสดงผลได้ใน React Native
-            video_url = f"https://drive.google.com/file/d/{lesson.google_drive_id}/preview"
+        video_url = f"https://drive.google.com/uc?export=download&id={lesson.google_drive_id}"
 
         lesson_data.append({
             "id": lesson.id,
