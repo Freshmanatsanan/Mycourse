@@ -193,7 +193,15 @@
                             <h4>{{ lesson.title }}</h4>
 
                             {% if lesson.google_drive_id %}
-                                <iframe src="https://drive.google.com/file/d/{{ lesson.google_drive_id }}/preview" width="640" height="480"></iframe>
+                            <iframe 
+                            src="https://drive.google.com/file/d/{{ lesson.google_drive_id }}/preview" 
+                            width="640" 
+                            height="480"
+                            allow="autoplay; encrypted-media"
+                            allowfullscreen
+                            onerror="this.outerHTML='<p style=\'color:red;\'>❌ ไม่สามารถโหลดวิดีโอได้ กรุณาลองใหม่อีกครั้ง</p>'">
+                            </iframe>
+                        
                             {% else %}
                                 <p>ไม่มีวิดีโอสำหรับบทเรียนนี้</p>
                             {% endif %}
