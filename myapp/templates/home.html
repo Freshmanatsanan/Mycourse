@@ -100,8 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="price">{{ course.price }} บาท</p>
                     
                     <!-- ✅ ปุ่มซื้อคอร์สเรียน -->
-                    <a href="{% url 'purchase_video_course' course.id %}" class="btn-course-1">ซื้อคอร์ส</a>
-                </div>
+                    <a href="{% url 'video_lesson_view' order.course.id %}" class="btn-orange">ดูวิดีโอการสอน</a>                </div>
                 {% empty %}
                 <p>ไม่มีคอร์สวิดีโอที่พร้อมใช้งานในขณะนี้</p>
                 {% endfor %}
