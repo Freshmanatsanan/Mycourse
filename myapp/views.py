@@ -3582,12 +3582,14 @@ def home(request):
     banners = Banner.objects.filter(status="approved") 
     approved_courses = Course.objects.filter(status='approved', is_closed=False)
     approved_video_courses = VideoCourse.objects.filter(status='approved')
+    purchased_video_courses = VideoCourseOrder.objects.filter(user=request.user)
     
     if request.user.is_authenticated:
         return render(request, 'home.html', {
             'banners': banners,
             'courses': approved_courses,
             'video_courses': approved_video_courses,
+            'purchased_video_courses': purchased_video_courses
 
         })  # สำหรับสมาชิก
     

@@ -100,7 +100,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="price">{{ course.price }} บาท</p>
                     
                     <!-- ✅ ปุ่มซื้อคอร์สเรียน -->
-                    <a href="{% url 'video_lesson_view' order.course.id %}" class="btn-orange">ดูวิดีโอการสอน</a>                </div>
+                    <div class="course-buttons">
+                        {% if order.payment_status == "pending" %}
+                            <button class="btn-orange1">รอการตรวจสอบ</button>
+                        {% elif order.payment_status == "confirmed" %}
+                            <a href="{% url 'video_lesson_view' order.course.id %}" class="btn-orange">ดูวิดีโอการสอน</a>
+                        {% else %}
+                            <span class="text-muted1">สถานะ: ปฏิเสธการชำระเงิน</span>
+                        {% endif %}
+                    </div>
+                    
                 {% empty %}
                 <p>ไม่มีคอร์สวิดีโอที่พร้อมใช้งานในขณะนี้</p>
                 {% endfor %}
