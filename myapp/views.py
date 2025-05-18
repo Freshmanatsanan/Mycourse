@@ -888,6 +888,8 @@ def purchase_video_course(request, course_id):
         return redirect("my_courses")  # ไปยังหน้าคอร์สของฉัน
 
     return render(request, "purchase_video_course.html", {"course": course})
+
+
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def purchase_video_course_api(request, course_id):
@@ -3582,14 +3584,23 @@ def home(request):
     banners = Banner.objects.filter(status="approved") 
     approved_courses = Course.objects.filter(status='approved', is_closed=False)
     approved_video_courses = VideoCourse.objects.filter(status='approved')
-    purchased_video_courses = VideoCourseOrder.objects.filter(user=request.user)
+
+    
     
     if request.user.is_authenticated:
+        # Query สำหรับ VideoCourse ที่ผู้ใช้เคยซื้อ
+        purchased_video_courses = VideoCourseOrder.objects.filter(user=request.user)
+        
+        # ดึงเฉพาะ ID ของ VideoCourse ที่เคยซื้อ
+        purchased_video_course_ids = list(purchased_video_courses.values_list('course_id', flat=True))
+
         return render(request, 'home.html', {
             'banners': banners,
             'courses': approved_courses,
             'video_courses': approved_video_courses,
-            'purchased_video_courses': purchased_video_courses
+            'purchased_video_courses': purchased_video_courses,
+            'purchased_video_course_ids': purchased_video_course_ids,
+           
 
         })  # สำหรับสมาชิก
     
@@ -3608,6 +3619,15 @@ def all_courses(request):
     approved_courses = Course.objects.filter(status='approved', is_closed=False)  
     approved_video_courses = VideoCourse.objects.filter(status='approved')
 
+
+    # ✅ ดึงข้อมูล Video Courses ที่ผู้ใช้เคยซื้อ
+    if request.user.is_authenticated:
+        purchased_video_courses = VideoCourseOrder.objects.filter(user=request.user)
+        purchased_video_course_ids = list(purchased_video_courses.values_list('course_id', flat=True))
+    else:
+        purchased_video_courses = []
+        purchased_video_course_ids = []
+
     if query:
         approved_courses = approved_courses.filter(
             Q(title__icontains=query) | 
@@ -3618,7 +3638,8 @@ def all_courses(request):
         )
 
     template_name = 'all_courses.html' if request.user.is_authenticated else 'guest_all_courses.html'
-    return render(request, template_name, {'courses': approved_courses, 'query': query,'video_courses': approved_video_courses, })
+    return render(request, template_name, {'courses': approved_courses, 'query': query,'video_courses': approved_video_courses,'purchased_video_courses': purchased_video_courses,
+        'purchased_video_course_ids': purchased_video_course_ids })
 
 
 #def all_courses(request):

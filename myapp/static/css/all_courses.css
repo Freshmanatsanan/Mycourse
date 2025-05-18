@@ -172,3 +172,46 @@ header {
     flex-direction: column;
     gap: 20px;
 }
+
+
+
+/* ปุ่มดูวิดีโอ */
+.btn-watch-video {
+    background-color: #4CAF50; /* สีเขียวเข้ม */
+    border-radius: 10px;
+    background-color: #4CAF50; /* สีเขียวเข้ม */
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-align: center;
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%; /* ปรับให้ปุ่มเต็มความกว้างในกรณีแนวตั้ง */
+    max-width: 250px; /* จำกัดความกว้างสูงสุดของปุ่ม */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-watch-video:hover {
+    background-color: #45a049; /* สีเขียวอ่อนเมื่อ hover */
+    transform: scale(1.02); /* ขยายเล็กน้อยเมื่อ hover */
+}
+
+/* ปุ่มรอการตรวจสอบ */
+.btn-pending {
+    display: inline-block;
+    padding: 13px 100px;
+    background-color: #FFA500; /* สีส้ม */
+    color: #ffffff;
+    font-size: 14px;
+    border-radius: 20px;
+    text-decoration: none;
+    text-align: center;
+    cursor: not-allowed; /* ตัวชี้เมาส์เป็นห้ามคลิก */
+    opacity: 0.7;
+}
+
+.btn-pending:hover {
+    background-color: #FFB347; /* สีส้มอ่อนเมื่อ hover */
+}

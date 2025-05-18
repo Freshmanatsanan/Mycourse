@@ -80,8 +80,20 @@
                                 <p class="instructor">ผู้สอน: {{ course.instructor }}</p>
                                 <p class="price">{{ course.price }} ฿</p>
                                 <div class="course-buttons">
+                                    {% if course.id in purchased_video_course_ids %}
+                                    {% for order in purchased_video_courses %}
+                                        {% if order.course_id == course.id %}
+                                            {% if order.payment_status == "confirmed" %}
+                                                <a href="{% url 'video_lesson_view' course.id %}" class="btn-watch-video">ดูวิดีโอ</a>
+                                            {% elif order.payment_status == "pending" %}
+                                                <button class="btn-pending" disabled>รอการตรวจสอบ</button>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
                                     <a href="{% url 'purchase_video_course' course.id %}"
                                         class="btn green">ซื้อคอร์ส</a>
+                                {% endif %}
                                     <a href="{% url 'video_course_details_user' course.id %}"
                                         class="btn orange">ดูรายละเอียดเพิ่มเติม</a>
                                 </div>
